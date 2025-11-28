@@ -1,5 +1,132 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Project Structure
+
+```
+messenger-clone/
+├── app/                          # Next.js App Router directory
+│   ├── (site)/                   # Route group for site pages
+│   │   ├── components/           # Site-specific components
+│   │   │   ├── AuthForm.tsx
+│   │   │   └── AuthSocialButton.tsx
+│   │   └── page.tsx              # Landing/home page
+│   ├── actions/                  # Server actions
+│   │   ├── getConversation.ts
+│   │   ├── getConversationById.ts
+│   │   ├── getCurrentUser.ts
+│   │   ├── getMessages.ts
+│   │   ├── getSession.ts
+│   │   └── getUsers.ts
+│   ├── api/                      # API routes
+│   │   ├── auth/
+│   │   │   └── [...nextauth]/    # NextAuth.js catch-all route
+│   │   │       └── route.ts
+│   │   ├── conversations/
+│   │   │   ├── [conversationId]/
+│   │   │   │   ├── route.tsx
+│   │   │   │   └── seen/
+│   │   │   │       └── route.ts
+│   │   │   └── route.ts
+│   │   ├── gemini/               # Gemini AI integration
+│   │   │   └── route.ts
+│   │   ├── messages/
+│   │   │   └── route.ts
+│   │   ├── register/
+│   │   │   └── route.ts
+│   │   └── settings/
+│   │       └── route.ts
+│   ├── components/               # Shared UI components
+│   │   ├── ActiveStatus.tsx
+│   │   ├── Avatar.tsx
+│   │   ├── AvatarGroup.tsx
+│   │   ├── Button.tsx
+│   │   ├── EmptyState.tsx
+│   │   ├── LoadingModal.tsx
+│   │   ├── Modal.tsx
+│   │   ├── inputs/               # Form input components
+│   │   │   ├── Input.tsx
+│   │   │   └── Select.tsx
+│   │   └── sidebar/              # Sidebar components
+│   │       ├── DesktopItem.tsx
+│   │       ├── DesktopSidebar.tsx
+│   │       ├── MobileFooter.tsx
+│   │       ├── MobileItem.tsx
+│   │       ├── SettingModal.tsx
+│   │       └── Sidebar.tsx
+│   ├── context/                  # React context providers
+│   │   ├── AuthContext.tsx
+│   │   └── ToasterContext.tsx
+│   ├── conversations/            # Conversations feature
+│   │   ├── [conversationId]/     # Dynamic conversation route
+│   │   │   ├── components/
+│   │   │   │   ├── Body.tsx
+│   │   │   │   ├── ConfirmModal.tsx
+│   │   │   │   ├── Form.tsx
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── ImageModal.tsx
+│   │   │   │   ├── MessageBox.tsx
+│   │   │   │   ├── MessageInput.tsx
+│   │   │   │   └── ProfileDrawer.tsx
+│   │   │   └── page.tsx
+│   │   ├── components/
+│   │   │   ├── ConversationBox.tsx
+│   │   │   ├── ConversationList.tsx
+│   │   │   └── GroupChatModal.tsx
+│   │   ├── layout.tsx
+│   │   ├── loading.tsx
+│   │   └── page.tsx
+│   ├── hooks/                    # Custom React hooks
+│   │   ├── useActiveChannel.ts
+│   │   ├── useActiveList.ts
+│   │   ├── useConversation.ts
+│   │   ├── useOtherUser.ts
+│   │   └── useRoutes.ts
+│   ├── libs/                     # Library configurations
+│   │   ├── ai-service.ts         # AI service integration
+│   │   ├── prismadb.ts           # Prisma database client
+│   │   └── pusher.ts             # Pusher real-time configuration
+│   ├── types/                    # TypeScript type definitions
+│   │   └── index.tsx
+│   ├── users/                    # Users feature
+│   │   ├── components/
+│   │   │   ├── UserBox.tsx
+│   │   │   └── UserList.tsx
+│   │   ├── layout.tsx
+│   │   ├── loading.tsx
+│   │   └── page.tsx
+│   ├── favicon.ico
+│   ├── globals.css               # Global styles
+│   └── layout.tsx                # Root layout
+├── pages/                        # Pages directory (legacy/API routes)
+│   └── api/
+│       └── pusher/
+│           └── auth.ts          # Pusher authentication
+├── public/                       # Static assets
+│   ├── images/
+│   │   ├── gemini_ai.png
+│   │   ├── logo.webp
+│   │   └── placeholder.webp
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── prisma/                       # Prisma ORM
+│   └── schema.prisma            # Database schema
+├── scripts/                     # Utility scripts
+├── utils/                        # Utility functions
+├── custom.d.ts                   # Custom TypeScript declarations
+├── eslint.config.mjs             # ESLint configuration
+├── next.config.ts                # Next.js configuration
+├── next-env.d.ts                 # Next.js environment types
+├── package.json                  # Dependencies
+├── postcss.config.mjs            # PostCSS configuration
+├── prisma.config.ts              # Prisma configuration
+├── proxy.ts                      # Proxy configuration
+├── README.md                     # Project documentation
+└── tsconfig.json                 # TypeScript configuration
+```
+
 ## Getting Started
 
 First, run the development server:

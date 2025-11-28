@@ -6,20 +6,26 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser();
+    // Nhận replyToId từ client nếu có
     const body = await request.json();
-    const { message, image, conversationId } = body;
+    const { message, image, conversationId, replyToId, fileUrl, fileName, fileSize } = body;
+
     if (!currentUser?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
+
     const newMessage = await prisma.message.create({
       data: {
         body: message,
         image: image,
-        conversations: {
+        conversation: {
           connect: {
             id: conversationId,
           },
         },
+        fileUrl,
+        fileName,
+        fileSize,
         sender: {
           connect: {
             id: currentUser.id,
@@ -30,10 +36,27 @@ export async function POST(request: Request) {
             id: currentUser.id,
           },
         },
+        ...(replyToId && {
+          replyTo: {
+            connect: {
+              id: replyToId,
+            },
+          },
+        }),
       },
       include: {
         seen: true,
         sender: true,
+        reactions: {
+          include: {
+            user: true,
+          },
+        },
+        replyTo: {
+          include: {
+            sender: true,
+          },
+        },
       },
     });
     const updatedConversation = await prisma.conversation.update({
@@ -58,13 +81,15 @@ export async function POST(request: Request) {
       },
     });
     await pusherServer.trigger(conversationId, "messages:new", newMessage);
-    const lastMessage = updatedConversation.messages[updatedConversation.messages.length - 1];
+    const lastMessage =
+      updatedConversation.messages[updatedConversation.messages.length - 1];
     updatedConversation.users.map((user) => {
       pusherServer.trigger(user.email!, "conversation:update", {
         id: conversationId,
         messages: [lastMessage],
       });
     });
+
     return NextResponse.json(newMessage);
   } catch (error: any) {
     console.log(error, "ERROR_MESSAGES");

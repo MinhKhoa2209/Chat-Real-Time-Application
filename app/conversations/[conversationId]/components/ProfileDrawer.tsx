@@ -33,7 +33,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
   const otherUser = useOtherUser(data);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { members } = useActiveList();
-  const isActive = members.indexOf(otherUser.email!) !== -1;
+
+  const isGeminiBot = useMemo(() => {
+    return otherUser.email === 'gemini@messenger.com';
+  }, [otherUser.email]);
+
+  const isRealUserActive = members.indexOf(otherUser.email!) !== -1;
+  const isActive = isGeminiBot || isRealUserActive; 
+
   const joinedDate = useMemo(() => {
     return format(new Date(otherUser.createdAt), "PP");
   }, [otherUser.createdAt]);
@@ -46,9 +53,12 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     if (data.isGroup) {
       return `${data.users.length} members`;
     }
-
+    if (isGeminiBot) {
+        return "Active";
+    }
     return isActive ? "Active" : "Offline";
-  }, [data]);
+  }, [data, isGeminiBot, isActive]);
+
   return (
     <>
       <ConfirmModal
@@ -96,13 +106,13 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                           </div>
                         </div>
                       </div>
-                      <div className=" relative mt-6 flex-1 px-4 sm:px-6  ">
+                      <div className=" relative mt-6 flex-1 px-4 sm:px-6  ">
                         <div className="flex flex-col items-center">
                           <div className="mb-2">
                             {data.isGroup ? (
                               <AvatarGroup users={data.users} />
                             ) : (
-                              <Avatar user={otherUser} />
+                              <Avatar user={otherUser} /> 
                             )}
                           </div>
                           <div>{title}</div>
@@ -146,7 +156,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                   </dd>
                                 </div>
                               )}
-                              {!data.isGroup && (
+                              {!data.isGroup && !isGeminiBot && (
                                 <>
                                   <hr />
                                   <div>
@@ -157,6 +167,20 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                       <time dateTime={joinedDate}>
                                         {joinedDate}
                                       </time>
+                                    </dd>
+                                  </div>
+                                </>
+                              )}
+
+                              {!data.isGroup && isGeminiBot && (
+                                <>
+                                  <hr />
+                                  <div>
+                                    <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0">
+                                      Role
+                                    </dt>
+                                    <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+                                      Trợ lý AI Gemini 
                                     </dd>
                                   </div>
                                 </>
