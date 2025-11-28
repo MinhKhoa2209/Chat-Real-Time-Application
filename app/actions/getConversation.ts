@@ -24,6 +24,22 @@ const getConversations = async () => {
           include: {
             sender: true,
             seen: true,
+            reactions: {
+              include: {
+                user: true,
+              },
+            },
+            replyTo: {
+              include: {
+                sender: true,
+                seen: true,
+                reactions: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
