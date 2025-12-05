@@ -36,7 +36,7 @@ const ConversationId = async ({ params }: { params: IParams }) => {
         <ConversationProvider>
             <Header conversation={conversation} />
             <Body initialMessages={messages} />
-            <Form isBot={isBot} />
+            <Form isBot={isBot} conversationUsers={conversation.users} />
         </ConversationProvider>
       </div>
     </div>

@@ -6,7 +6,7 @@ const getConversationById = async (
 ) => {
   try {
     const currentUser = await getCurrentUser();
-    console.log("Đang tìm conversation với ID:", conversationId);
+    console.log("Finding conversation with ID:", conversationId);
 
     if (!currentUser?.email) {
       return null;

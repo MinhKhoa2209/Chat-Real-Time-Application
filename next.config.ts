@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  env: {
+    GIPHY_API_KEY: process.env.GIPHY_API_KEY,
+  },
   images: {
     remotePatterns: [
       {
@@ -27,6 +30,30 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "appwrite.io", 
+      },
+      {
+        protocol: "https",
+        hostname: "media.giphy.com",
+      },
+      {
+        protocol: "https",
+        hostname: "media0.giphy.com",
+      },
+      {
+        protocol: "https",
+        hostname: "media1.giphy.com",
+      },
+      {
+        protocol: "https",
+        hostname: "media2.giphy.com",
+      },
+      {
+        protocol: "https",
+        hostname: "media3.giphy.com",
+      },
+      {
+        protocol: "https",
+        hostname: "media4.giphy.com",
       },
     ],
   },

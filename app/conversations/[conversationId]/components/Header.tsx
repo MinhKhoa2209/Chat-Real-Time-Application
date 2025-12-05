@@ -2,36 +2,97 @@
 
 import { Conversation, User } from "@prisma/client";
 import useOtherUser from "@/app/hooks/useOtherUser";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { HiChevronLeft, HiEllipsisHorizontal } from "react-icons/hi2";
 import Avatar from "@/app/components/Avatar";
 import ProfileDrawer from "./ProfileDrawer";
 import AvatarGroup from "@/app/components/AvatarGroup";
 import useActiveList from "@/app/hooks/useActiveList";
+import { pusherClient } from "@/app/libs/pusher";
+import { useSession } from "next-auth/react";
+import axios from "axios";
 
 interface HeaderProps {
   conversation: Conversation & {
     users: User[];
+    image?: string | null;
   };
 }
 
-const Header: React.FC<HeaderProps> = ({ conversation }) => {
+const Header: React.FC<HeaderProps> = ({ conversation: initialConversation }) => {
+  const [conversation, setConversation] = useState(initialConversation);
   const otherUser = useOtherUser(conversation);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { members } = useActiveList();
+  const session = useSession();
+
+  // Listen for conversation updates
+  useEffect(() => {
+    const email = session.data?.user?.email;
+    if (!email) return;
+
+    console.log("Header: Setting up listener for channel:", email);
+    
+    // Subscribe to channel (will reuse existing if already subscribed)
+    const channel = pusherClient.subscribe(email);
+
+    const updateHandler = async (updatedConversation: any) => {
+      console.log("Header: Received update event");
+      console.log("Header: Full data keys:", Object.keys(updatedConversation || {}));
+      console.log("Header: Comparing IDs:", updatedConversation?.id, "vs", conversation.id);
+      
+      if (updatedConversation && updatedConversation.id === conversation.id) {
+        console.log("Header: MATCH! Users array length:", updatedConversation.users?.length);
+        
+        // If imageUpdated flag is set, refetch to get the new image
+        if (updatedConversation.imageUpdated) {
+          console.log("Header: Image was updated, refetching...");
+          try {
+            const response = await axios.get(`/api/conversations/${conversation.id}`);
+            const freshData = response.data;
+            setConversation((current) => ({
+              ...current,
+              ...freshData,
+            }));
+            return;
+          } catch (error) {
+            console.error("Header: Failed to refetch conversation:", error);
+          }
+        }
+        
+        setConversation((current) => {
+          const newConversation = {
+            ...current,
+            ...updatedConversation,
+            users: updatedConversation.users || current.users,
+            name: updatedConversation.name ?? current.name,
+            image: updatedConversation.image ?? current.image,
+          };
+          console.log("Header: New conversation users count:", newConversation.users?.length);
+          return newConversation;
+        });
+      }
+    };
+
+    channel.bind("conversation:update", updateHandler);
+
+    return () => {
+      channel.unbind("conversation:update", updateHandler);
+    };
+  }, [conversation.id, session.data?.user?.email]);
 
   const isGeminiBot = useMemo(() => {
-    return otherUser.email === 'gemini@messenger.com';
-  }, [otherUser.email]);
+    return otherUser?.email === 'gemini@messenger.com';
+  }, [otherUser?.email]);
 
-  const isRealUserActive = members.indexOf(otherUser.email!) !== -1;
+  const isRealUserActive = otherUser?.email ? members.indexOf(otherUser.email) !== -1 : false;
   
   const isActive = isGeminiBot || isRealUserActive;
 
   const statusText = useMemo(() => {
     if (conversation.isGroup) {
-      return `${conversation.users.length} members`;
+      return `${conversation.users?.length || 0} members`;
     }
     if (isGeminiBot) {
       return "Active"; 
@@ -56,12 +117,12 @@ const Header: React.FC<HeaderProps> = ({ conversation }) => {
             <HiChevronLeft size={32} />
           </Link>
           {conversation.isGroup ? (
-            <AvatarGroup users={conversation.users} />
+            <AvatarGroup users={conversation.users} groupImage={conversation.image} />
           ) : (
             <Avatar user={otherUser} /> 
           )}
           <div className="flex flex-col">
-            <div>{conversation.name || otherUser.name}</div>
+            <div>{conversation.name || otherUser?.name || "Conversation"}</div>
             <div className=" text-sm font-light text-neutral-500">
               {statusText}
             </div>

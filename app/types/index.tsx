@@ -5,6 +5,7 @@ export type FullMessageType = Message & {
   seen: User[];
   reactions: (Reaction & { user: User })[];
   replyTo?: FullMessageType | null;
+  forwardedFrom?: User | null;
 };
 
 export type FullConversationType = Conversation & {

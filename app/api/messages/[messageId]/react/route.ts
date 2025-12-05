@@ -5,11 +5,11 @@ import { pusherServer } from "@/app/libs/pusher";
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ messageId: string }> } 
+  { params }: { params: Promise<{ messageId: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser();
-    const { messageId } = await params; 
+    const { messageId } = await params;
     const body = await request.json();
     const { content } = body;
 
@@ -27,24 +27,24 @@ export async function POST(
     let reaction;
 
     if (existingReaction) {
-        if(existingReaction.content === content) {
-             await prisma.reaction.delete({ where: { id: existingReaction.id } });
-        } else {
-            reaction = await prisma.reaction.update({
-                where: { id: existingReaction.id },
-                data: { content }
-            });
-        }
+      if (existingReaction.content === content) {
+        await prisma.reaction.delete({ where: { id: existingReaction.id } });
+      } else {
+        reaction = await prisma.reaction.update({
+          where: { id: existingReaction.id },
+          data: { content },
+        });
+      }
     } else {
       reaction = await prisma.reaction.create({
         data: {
           content,
           user: {
-            connect: { id: currentUser.id }
+            connect: { id: currentUser.id },
           },
           message: {
-            connect: { id: messageId }
-          }
+            connect: { id: messageId },
+          },
         },
       });
     }
@@ -56,15 +56,51 @@ export async function POST(
         seen: true,
         reactions: { include: { user: true } },
         replyTo: { include: { sender: true } },
+        forwardedFrom: true,
       },
     });
 
     if (updatedMessage) {
-        await pusherServer.trigger(
-            updatedMessage.conversationId,
-            "message:update",
-            updatedMessage
-        );
+      const pusherPayload = { ...updatedMessage };
+
+      // 1. Loại bỏ thông tin nhạy cảm và nặng của sender
+      if (pusherPayload.sender) {
+        // @ts-ignore: Gán null để giảm size dù TS báo lỗi
+        pusherPayload.sender.hashedPassword = null; 
+      }
+
+      if (pusherPayload.seen) {
+         // @ts-ignore
+        pusherPayload.seen = pusherPayload.seen.map((user) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        }));
+      }
+
+      if (pusherPayload.reactions) {
+         // @ts-ignore
+        pusherPayload.reactions = pusherPayload.reactions.map((r) => ({
+            ...r,
+            user: {
+                id: r.user.id,
+                name: r.user.name,
+                email: r.user.email,
+                image: r.user.image,
+            }
+        }));
+      }
+
+      if (pusherPayload.image && pusherPayload.image.length > 5000) {
+          pusherPayload.image = "IMAGE_PLACEHOLDER"; 
+      }
+
+      await pusherServer.trigger(
+        updatedMessage.conversationId,
+        "message:update",
+        pusherPayload 
+      );
     }
 
     return NextResponse.json(reaction || { status: "deleted" });

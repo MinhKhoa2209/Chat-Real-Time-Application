@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -26,6 +25,8 @@ model User {
 
   accounts Account[]
   messages Message[]
+  
+  forwardedMessages Message[] @relation("ForwardedFrom")
 
   reactions Reaction[]
 }
@@ -54,13 +55,16 @@ model Conversation {
   createdAt     DateTime @default(now())
   lastMessageAt DateTime @default(now())
   name          String?
+  image         String?
   isGroup       Boolean?
 
   userIds String[] @db.ObjectId
   users   User[]   @relation(fields: [userIds], references: [id])
 
   messages Message[]
-  messagesSId String[] @db.ObjectId 
+  messagesSId String[] @db.ObjectId
+  
+  deletedForIds String[] @db.ObjectId @default([])
 }
 
 model Message {
@@ -81,11 +85,16 @@ model Message {
   senderId String @db.ObjectId
   sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
   isDeleted Boolean @default(false)
+  
+  hiddenForIds String[] @db.ObjectId @default([])
 
   replyToId String?  @db.ObjectId
   replyTo   Message? @relation("ReplyTo", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   
   replies   Message[] @relation("ReplyTo")
+
+  forwardedFromId String?  @db.ObjectId
+  forwardedFrom   User?    @relation("ForwardedFrom", fields: [forwardedFromId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   reactions Reaction[]
 }

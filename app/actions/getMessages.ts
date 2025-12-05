@@ -24,7 +24,8 @@ const getMessages = async (conversationId: string) => {
                     }
                 }
             }
-        }
+        },
+        forwardedFrom: true
       },
       orderBy: {
         createdAt: 'asc'

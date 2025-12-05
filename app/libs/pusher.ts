@@ -16,6 +16,8 @@ export const pusherClient = new PusherClient(
       endpoint: "/api/pusher/auth",
       transport: "ajax",
     },
-    cluster: 'ap1'
+    cluster: 'ap1',
+    enabledTransports: ['ws', 'wss'],
   }
 );
+

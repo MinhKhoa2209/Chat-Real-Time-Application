@@ -17,6 +17,12 @@ const getConversations = async () => {
         userIds: {
           has: currentUser.id,
         },
+        // TODO: Re-enable after Prisma generate
+        // deletedForIds: {
+        //   not: {
+        //     has: currentUser.id,
+        //   },
+        // },
       },
       include: {
         users: true,

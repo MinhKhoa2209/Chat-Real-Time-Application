@@ -25,11 +25,17 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({ isOpen, onClose }) => {
     axios
       .delete(`/api/conversations/${conversationId}`)
       .then(() => {
+        console.log("Conversation deleted successfully");
         onClose();
         router.push("/conversations");
-        router.refresh();
+        // Don't call router.refresh() - let Pusher handle the real-time update
+        toast.success("Conversation deleted successfully!");
       })
-      .catch(() => toast.error("Something went wrong!"))
+      .catch((error) => {
+        console.error("Delete conversation error:", error);
+        const errorMessage = error.response?.data || "Something went wrong!";
+        toast.error(errorMessage);
+      })
       .finally(() => setIsLoading(false));
   }, [router, conversationId, onClose]);
   return (

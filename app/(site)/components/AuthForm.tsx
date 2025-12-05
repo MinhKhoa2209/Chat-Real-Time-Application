@@ -83,6 +83,13 @@ const AuthForm = () => {
 
   return (
     <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="flex justify-center mb-6">
+        <h1
+          className="  text-5xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-sky-500 to-indigo-500" >
+          KAICHAT
+        </h1>
+      </div>
+      {/* End KAICHAT Logo */}
       <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
         <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {variant === "REGISTER" && (
@@ -141,7 +148,7 @@ const AuthForm = () => {
         <div className="flex gap-2 justify-center text-sm mt-6 px-2 text-gray-500">
           <div>
             {variant === "LOGIN"
-              ? "New to Messenger?"
+              ? "New to KAICHAT?"
               : "Already have an account?"}
           </div>
           <div onClick={toggleVariant} className="underline cursor-pointer">

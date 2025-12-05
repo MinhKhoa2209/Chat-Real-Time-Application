@@ -6,8 +6,10 @@ import { FullConversationType } from "@/app/types";
 import clsx from "clsx";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, isThisWeek, formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
 import { useCallback, useMemo } from "react";
+import React from "react";
 import AvatarGroup from "@/app/components/AvatarGroup";
 
 interface ConversationBoxProps {
@@ -47,23 +49,78 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
       return false;
     }
 
-    return seenArray.filter((user) => user.email === userEmail).length !== 0;
+    return seenArray.filter((user: any) => user.email === userEmail).length !== 0;
   }, [userEmail, lastMessage]);
+
+  // Format time like Messenger
+  const formattedTime = useMemo(() => {
+    if (!lastMessage?.createdAt) return "";
+
+    const date = new Date(lastMessage.createdAt);
+    
+    if (isToday(date)) {
+      return format(date, "p"); // Hour:minute
+    }
+    
+    if (isYesterday(date)) {
+      return "Yesterday";
+    }
+    
+    if (isThisWeek(date)) {
+      return format(date, "EEEE"); 
+    }
+    
+    return format(date, "dd/MM/yyyy"); 
+  }, [lastMessage?.createdAt]);
   const lastMessageText = useMemo(() => {
     if (lastMessage?.image) {
-      return "Đã gửi một ảnh";
+      return "Sent an image";
     }
 
     if (lastMessage?.fileUrl) {
-      return "Đã gửi một tệp";
+      return "Sent a file";
     }
 
     if (lastMessage?.body) {
+      const body = lastMessage.body as string;
+      
+      // Check if this is an "added to group" message
+      if (body.includes(" added ") && body.includes(" to the group")) {
+        // First check addedMemberEmails from Pusher
+        const addedMemberEmails = (lastMessage as any).addedMemberEmails || [];
+        
+        if (userEmail && addedMemberEmails.includes(userEmail)) {
+          const senderName = lastMessage.sender?.name || "Someone";
+          return `${senderName} added you to the group`;
+        }
+        
+        // Fallback: Check if user's name is in the message body
+        // Get current user's name from session or extract from body
+        const userName = session.data?.user?.name;
+        if (userName && body.includes(` added ${userName}`)) {
+          const senderName = lastMessage.sender?.name || "Someone";
+          return `${senderName} added you to the group`;
+        }
+      }
       return lastMessage.body;
     }
 
-    return "Bắt đầu cuộc trò chuyện";
-  }, [lastMessage]);
+    return "Start a conversation";
+  }, [lastMessage, userEmail, session.data?.user?.name]);
+
+  const unreadCount = useMemo(() => {
+    if (!userEmail) return 0;
+
+    const messages = data.messages || [];
+    const unread = messages.filter((message: any) => {
+      const seenArray = message.seen || [];
+      const hasSeenByUser = seenArray.some((user: any) => user.email === userEmail);
+      const isOwnMessage = message.sender?.email === userEmail;
+      return !isOwnMessage && !hasSeenByUser;
+    });
+
+    return unread.length;
+  }, [data.messages, userEmail]);
 
   return (
     <div
@@ -74,7 +131,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
       )}
     >
       {data.isGroup ? (
-        <AvatarGroup users={data.users} />
+        <AvatarGroup users={data.users} groupImage={data.image} />
       ) : (
         <Avatar user={otherUser} />
       )}
@@ -84,23 +141,30 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
             <p className="text-md font-medium text-gray-900">
               {data.name || otherUser.name}
             </p>
-            {lastMessage?.createdAt && (
+            {formattedTime && (
               <p className="text-xs text-gray-400 font-light">
-                {format(new Date(lastMessage.createdAt), "p")}
+                {formattedTime}
               </p>
             )}
           </div>
-          <p
-            className={clsx(
-              `truncate text-s `,
-              hasSeen ? "text-gray-500" : "text-black font-medium"
+          <div className="flex justify-between items-center">
+            <p
+              className={clsx(
+                `truncate text-s flex-1`,
+                hasSeen ? "text-gray-500" : "text-black font-medium"
+              )}
+            >
+              {lastMessageText}
+            </p>
+            {unreadCount > 0 && (
+              <div className="ml-2 flex-shrink-0 bg-sky-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </div>
             )}
-          >
-            {lastMessageText}
-          </p>
+          </div>
         </div>
       </div>
     </div>
   );
 };
-export default ConversationBox;
+export default React.memo(ConversationBox);

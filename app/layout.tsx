@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Messenger Clone",
+  title: "KAICHAT",
   description: "Messenger Clone built with Next.js and Tailwind CSS",
 };
 
