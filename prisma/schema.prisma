@@ -124,3 +124,20 @@ model AiKnowledge {
   content   String
   createdAt DateTime @default(now())
 }
+
+model Call {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  type           String    // "voice" | "video"
+  status         String    // "ringing" | "ongoing" | "ended" | "missed" | "rejected"
+  
+  callerId       String    @db.ObjectId
+  receiverId     String    @db.ObjectId
+  conversationId String    @db.ObjectId
+  
+  startedAt      DateTime  @default(now())
+  answeredAt     DateTime?
+  endedAt        DateTime?
+  duration       Int?      // seconds
+  
+  endReason      String?   // "completed" | "missed" | "rejected" | "busy" | "failed"
+}

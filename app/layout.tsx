@@ -4,6 +4,8 @@ import "./globals.css";
 import ToasterContext from "./context/ToasterContext";
 import AuthContext from "./context/AuthContext";
 import ActiveStatus from "./components/ActiveStatus";
+import { CallProvider } from "./context/CallContext";
+import CallComponents from "./components/call/CallComponents";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,9 +33,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthContext>
-        <ToasterContext />
-        <ActiveStatus />
-        {children}
+          <CallProvider>
+            <ToasterContext />
+            <ActiveStatus />
+            <CallComponents />
+            {children}
+          </CallProvider>
         </AuthContext>
       </body>
     </html>

@@ -12,6 +12,7 @@ import useActiveList from "@/app/hooks/useActiveList";
 import { pusherClient } from "@/app/libs/pusher";
 import { useSession } from "next-auth/react";
 import axios from "axios";
+import CallButtons from "@/app/components/call/CallButtons";
 
 interface HeaderProps {
   conversation: Conversation & {
@@ -128,11 +129,20 @@ const Header: React.FC<HeaderProps> = ({ conversation: initialConversation }) =>
             </div>
           </div>
         </div>
-        <HiEllipsisHorizontal
-          size={32}
-          onClick={() => setDrawerOpen(true)}
-          className="text-sky-500 cursor-pointer hover:text-sky-600 transition"
-        />
+        <div className="flex items-center gap-2">
+          {!conversation.isGroup && otherUser && (
+            <CallButtons
+              otherUser={otherUser}
+              conversationId={conversation.id}
+              isGroup={conversation.isGroup || false}
+            />
+          )}
+          <HiEllipsisHorizontal
+            size={32}
+            onClick={() => setDrawerOpen(true)}
+            className="text-sky-500 cursor-pointer hover:text-sky-600 transition"
+          />
+        </div>
       </div>
     </>
   );
