@@ -2,27 +2,29 @@
 
 import Button from "@/app/components/Button";
 import Input from "@/app/components/inputs/Input";
-import { use, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FieldValues, useForm, SubmitHandler } from "react-hook-form";
 import AuthSocialButton from "./AuthSocialButton";
 import { BsGithub, BsGoogle } from "react-icons/bs";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 type Varinant = "LOGIN" | "REGISTER";
 
 const AuthForm = () => {
   const session = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get("callbackUrl") || "/users";
   const [variant, setVariant] = useState<Varinant>("LOGIN");
   const [isLoading, setIsLoading] = useState(false);
+  
   useEffect(() => {
     if (session?.status === "authenticated") {
-      router.push("/users");
-      console.log("Authenticated");
+      router.push(callbackUrl);
     }
-  }, [session?.status, router]);
+  }, [session?.status, router, callbackUrl]);
 
   const toggleVariant = useCallback(() => {
     if (variant === "LOGIN") {
