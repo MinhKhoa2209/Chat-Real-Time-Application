@@ -216,24 +216,52 @@ export async function DELETE(
       (user: any) => user.id === currentUser.id
     );
 
+    console.log("DELETE conversation - User ID:", currentUser.id);
+    console.log("DELETE conversation - Conversation users:", existingConversation.users.map((u: any) => u.id));
+    console.log("DELETE conversation - Is user in conversation:", isUserInConversation);
+
     if (!isUserInConversation) {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Soft delete: Add current user to deletedForIds using raw MongoDB
-    await prisma.$runCommandRaw({
-      update: "Conversation",
-      updates: [
-        {
-          q: { _id: { $oid: conversationId } },
-          u: { $addToSet: { deletedForIds: currentUser.id } },
+    // Hide all existing messages for current user (so they won't see old messages)
+    await prisma.message.updateMany({
+      where: {
+        conversationId: conversationId,
+      },
+      data: {
+        hiddenForIds: {
+          push: currentUser.id,
         },
-      ],
+      },
     });
 
-    const updatedConversation = await prisma.conversation.findUnique({
+    // Get current deletedForIds to check if user already deleted
+    const currentConversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
+      select: { deletedForIds: true },
     });
+
+    console.log("DELETE conversation - Current deletedForIds:", currentConversation?.deletedForIds);
+
+    // Only add if not already in the array
+    const alreadyDeleted = currentConversation?.deletedForIds?.includes(currentUser.id);
+    
+    if (!alreadyDeleted) {
+      // Mark conversation as deleted for this user using Prisma update
+      const updated = await prisma.conversation.update({
+        where: { id: conversationId },
+        data: {
+          deletedForIds: {
+            push: currentUser.id,
+          },
+        },
+        select: { deletedForIds: true },
+      });
+      console.log("DELETE conversation - Updated deletedForIds:", updated.deletedForIds);
+    } else {
+      console.log("DELETE conversation - User already in deletedForIds, skipping update");
+    }
 
     // Notify only current user about conversation removal
     if (currentUser.email) {
@@ -248,7 +276,7 @@ export async function DELETE(
       }
     }
     
-    return NextResponse.json({ success: true, conversation: updatedConversation });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("ERROR_CONVERSATION_DELETE:", error);
     

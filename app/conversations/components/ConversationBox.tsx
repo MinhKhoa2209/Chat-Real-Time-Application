@@ -31,8 +31,18 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
 
   const lastMessage = useMemo(() => {
     const messages = data.messages || [];
+    const userId = session.data?.user?.id;
+    
+    // Find the last message that is not hidden for current user
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i] as any;
+      const hiddenForIds = msg.hiddenForIds || [];
+      if (!hiddenForIds.includes(userId)) {
+        return msg;
+      }
+    }
     return messages[messages.length - 1];
-  }, [data.messages]);
+  }, [data.messages, session.data?.user?.id]);
 
   const userEmail = useMemo(() => {
     return session.data?.user?.email;
@@ -40,17 +50,29 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
 
   const hasSeen = useMemo(() => {
     if (!lastMessage) {
-      return false;
+      return true; // No message = nothing to see
     }
 
-    const seenArray = lastMessage.seen || [];
+    // Own messages are always "seen"
+    if (lastMessage.sender?.email === userEmail) {
+      return true;
+    }
 
     if (!userEmail) {
       return false;
     }
 
-    return seenArray.filter((user: any) => user.email === userEmail).length !== 0;
-  }, [userEmail, lastMessage]);
+    // Check seenIds first (more reliable)
+    const seenIds = (lastMessage as any).seenIds || [];
+    const userId = session.data?.user?.id;
+    if (userId && seenIds.includes(userId)) {
+      return true;
+    }
+
+    // Fallback to seen array
+    const seenArray = lastMessage.seen || [];
+    return seenArray.some((user: any) => user.email === userEmail);
+  }, [userEmail, lastMessage, session.data?.user?.id]);
 
   // Format time like Messenger
   const formattedTime = useMemo(() => {
@@ -73,12 +95,17 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
     return format(date, "dd/MM/yyyy"); 
   }, [lastMessage?.createdAt]);
   const lastMessageText = useMemo(() => {
+    if (!lastMessage) {
+      return "Start a conversation";
+    }
+
     if (lastMessage?.image) {
       return "Sent an image";
     }
 
     if (lastMessage?.fileUrl) {
-      return "Sent a file";
+      const fileName = (lastMessage as any).fileName;
+      return fileName ? `Sent a file: ${fileName}` : "Sent a file";
     }
 
     if (lastMessage?.body) {
@@ -95,7 +122,6 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
         }
         
         // Fallback: Check if user's name is in the message body
-        // Get current user's name from session or extract from body
         const userName = session.data?.user?.name;
         if (userName && body.includes(` added ${userName}`)) {
           const senderName = lastMessage.sender?.name || "Someone";
@@ -108,19 +134,19 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
     return "Start a conversation";
   }, [lastMessage, userEmail, session.data?.user?.name]);
 
-  const unreadCount = useMemo(() => {
-    if (!userEmail) return 0;
-
-    const messages = data.messages || [];
-    const unread = messages.filter((message: any) => {
-      const seenArray = message.seen || [];
-      const hasSeenByUser = seenArray.some((user: any) => user.email === userEmail);
-      const isOwnMessage = message.sender?.email === userEmail;
-      return !isOwnMessage && !hasSeenByUser;
-    });
-
-    return unread.length;
-  }, [data.messages, userEmail]);
+  // Check if last message is unread (simplified for real-time updates)
+  const hasUnread = useMemo(() => {
+    if (!userEmail || !lastMessage) return false;
+    
+    // Own messages are always "read"
+    if (lastMessage.sender?.email === userEmail) return false;
+    
+    // Check if user has seen the last message
+    const seenArray = lastMessage.seen || [];
+    const hasSeenByUser = seenArray.some((user: any) => user.email === userEmail);
+    
+    return !hasSeenByUser;
+  }, [lastMessage, userEmail]);
 
   return (
     <div
@@ -139,7 +165,7 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
         <div className="focus:outline-none">
           <div className="flex justify-between items-center mb-1">
             <p className="text-md font-medium text-gray-900">
-              {data.name || otherUser.name}
+              {data.name || otherUser?.name || "Conversation"}
             </p>
             {formattedTime && (
               <p className="text-xs text-gray-400 font-light">
@@ -156,9 +182,9 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
             >
               {lastMessageText}
             </p>
-            {unreadCount > 0 && (
+            {hasUnread && (
               <div className="ml-2 flex-shrink-0 bg-sky-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                {unreadCount > 9 ? "9+" : unreadCount}
+                •
               </div>
             )}
           </div>

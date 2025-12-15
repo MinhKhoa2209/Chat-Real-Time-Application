@@ -19,17 +19,29 @@ export async function GET() {
         userIds: {
           has: currentUser.id,
         },
+        // Filter out conversations deleted by current user
+        // Handle both cases: deletedForIds exists or is empty/null
+        OR: [
+          { deletedForIds: { isEmpty: true } },
+          { NOT: { deletedForIds: { has: currentUser.id } } },
+        ],
       },
       include: {
-        users: true,
+        users: {
+          select: { id: true, name: true, email: true, image: true },
+        },
         messages: {
           take: 1,
-          orderBy: {
-            createdAt: "desc",
-          },
-          include: {
-            sender: true,
-            seen: true,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            body: true,
+            image: true,
+            createdAt: true,
+            senderId: true,
+            seenIds: true,
+            sender: { select: { id: true, name: true, email: true, image: true } },
+            seen: { select: { id: true, email: true, name: true } },
           },
         },
       },
@@ -69,11 +81,26 @@ export async function POST(request: Request) {
             },
           ],
         },
+        select: {
+          id: true,
+          deletedForIds: true,
+          users: true,
+        },
       });
 
       const singleConversation = existingConversations[0];
 
       if (singleConversation) {
+        // Clear deletedForIds for current user if they had deleted this conversation
+        if (singleConversation.deletedForIds?.includes(currentUser.id)) {
+          const updatedDeletedForIds = singleConversation.deletedForIds.filter(
+            (id: string) => id !== currentUser.id
+          );
+          await prisma.conversation.update({
+            where: { id: singleConversation.id },
+            data: { deletedForIds: updatedDeletedForIds },
+          });
+        }
         return NextResponse.json(singleConversation);
       }
 

@@ -1,0 +1,711 @@
+
+VIETNAM - KOREA UNIVERSITY OF INFORMATION AND COMMUNICATION TECHNOLOGY
+Faculty of Computer Science
+ 
+
+BASIC PROJECT 4
+BUILDING A REAL-TIME CHAT APPLICATION WITH INTEGRATED AI CHATBOT ASSISTANT
+KAICHAT
+
+
+
+Students: 	Dinh Minh Khoa – 23IT128
+Class: 	23GIT
+Instructor:	M.Sc. Mai Lam
+
+
+
+
+Da Nang, 2025 November
+ 
+
+VIETNAM - KOREA UNIVERSITY OF INFORMATION AND COMMUNICATION TECHNOLOGY
+Faculty of Computer Science
+ 
+
+BASIC PROJECT 4
+BUILDING A REAL-TIME CHAT APPLICATION WITH INTEGRATED AI CHATBOT ASSISTANT
+KAICHAT
+
+
+
+Students: 	Dinh Minh Khoa – 23IT128
+Class: 	23GIT
+Instructor:	M.Sc. Mai Lam
+
+
+
+
+Da Nang, 2025 November
+
+ 
+INSTRUCTOR’S COMMENTS
+…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...…………………………………………………………………………………………...……………………………………………………
+	Da Nang, 2025 …………………
+
+
+
+
+	Instructor’s Signature
+
+ 
+ACKNOWLEDGEMENT
+
+I would like to express my deepest gratitude to all individuals and organizations who supported the research and development of this project.
+My special thanks go to the faculty of the Computer Science Department for imparting invaluable knowledge. I sincerely thank my instructor, M.Sc. Mai Lam, for the continuous guidance and support provided throughout the implementation of this project.
+This report is the result of my best efforts. I am profoundly grateful for the valuable feedback and mutual assistance received, and I am committed to further improving this work.
+	
+	Students,
+	Dinh Minh Khoa
+	
+ 
+TABLE OF CONTENTS
+LIST OF FIGURES	v
+INTRODUCTION	1
+CHAPTER 1. THEORETICAL BASIS	2
+1.1 Frontend technologies	2
+1.1.1 Next.js 15	2
+1.1.2 React JS	2
+1.1.3 TypeScript	3
+1.1.4 Tailwind CSS	3
+1.2 Backend technologies	3
+1.2.1 Next.js API Routes (Serverless)	3
+1.2.2 Prisma ORM	4
+1.2.3 MongoDB	4
+1.2.4 Real-time Communication (Pusher)	5
+1.2.5 Authentication (NextAuth.js )	5
+1.2.6 AI Integration (Google Gemini API)	6
+CHAPTER 2. SYSTEM ANALYSIS AND DESIGN	7
+2.1 Requirement analysis	7
+2.1.1 User requirements	7
+2.1.2 Functional requirements	7
+2.1.3 Non-functional requirements	8
+2.1.4 System requirements	9
+2.2 Use case diagram	9
+2.2.1 Diagrams	9
+2.2.2 Use case specifications	10
+2.3 Activity diagram	15
+2.3.1 Login activity diagram	15
+2.3.3 Send message activity diagram	16
+2.3.4 Chat with AI activity diagram	17
+2.3.5 View conversation list activity diagram	17
+2.4 Sequence diagram	17
+2.4.1 Login sequence diagram	17
+2.4.2 Create conversation sequence diagram	18
+2.4.3 Send message sequence diagram	19
+2.4.4 Chat with AI sequence diagram	20
+2.5 State diagram	21
+2.5.1 Login state diagram	21
+2.5.2 Create conversation state diagram	22
+2.5.3 Send message state diagram	23
+2.5.4 Chat with AI state diagram	24
+2.6 Class diagram	26
+2.6.1 Classes, Attributes, Methods	26
+2.6.2 Diagram	26
+CHAPTER 3. IMPLEMENTATION AND RESULTS	28
+3.1 Login interface	28
+3.1.1 Purpose	28
+3.1.2 Design rationable	28
+3.2 Dashboard interface	29
+3.2.1 Purpose:	29
+3.2.2 Design rationale:	29
+3.3 User-to-User Chat interface	29
+3.3.1 Purpose	30
+3.3.2 Design  rationable	30
+3.4 Group chat interface	30
+3.4.1 Purpose	31
+3.4.2 Design rationable	31
+3.5 AI Chatbot Assistant interface	31
+3.5.1 Purpose	32
+3.5.2 Design rationable	32
+3.6 User profile management interface	32
+3.6.1 Purpose	33
+3.6.2 Design rationable	33
+CONCLUSION	34
+REFERENCE DOCUMENT	36
+
+
+
+
+ 
+LIST OF FIGURES
+
+Figure 1.1: Next.js	2
+Figure 1.2: React JS	2
+Figure 1.3: TypeScript	3
+Figure 1.4: Tailwind CSS	3
+Figure 1.5: Next.js API Routes	4
+Figure 1.6: Prisma	4
+Figure 1.7: MongoDB	5
+Figure 1.8: Pusher	5
+Figure 1.9: NextAuth.js	6
+Figure 1.10: Google Gemini API	6
+Figure 2.1: Use case diagram	10
+Figure 2.2: Login activity diagram	15
+Figure 2.3: Create conversation activity diagram	16
+Figure 2.4: Send message activity diagram	16
+Figure 2.5:  Chat with AI activity diagram	17
+Figure 2.6: View conversation list activity diagram	17
+Figure 2.7: Login sequence diagram	18
+Figure 2.8: Create conversation sequence diagram	19
+Figure 2.9: Send message sequence diagram	20
+Figure 2.10: Chat with AI sequence diagram	21
+Figure 2.11: Login state diagram	22
+Figure 2.12: Create conversation state diagram	23
+Figure 2.13: Send message state diagram	24
+Figure 2.14: Chat with AI state diagram	25
+Figure 2.15: Class diagram	27
+Figure 3.1: Login interface	28
+Figure 3.2: Dashboard interface	29
+Figure 3.3: User-to-User Chat interface	30
+Figure 3.4: Group chat interface	31
+Figure 3.5: AI Chatbot Assistant interface	32
+Figure 3.6: 3.6 User profile management interface	33
+ 
+INTRODUCTION
+1.1 Reason for choosing the topic
+In the digital world, fast and efficient communication is essential. Most standard chat apps lack smart features powered by Artificial Intelligence (AI). This project integrates an AI Chatbot Assistant directly into a real-time messaging environment. This combination enhances the user experience by providing quick help and automated information without switching apps. The goal is to create a seamless, smart, and practical tool by merging high-speed real-time technology with a modern AI model.
+1.2 Overview of the project domain
+The domain of this project sits at the core of real-time communication and AI in web applications. It involves developing scalable, secure, and interactive platforms. Specifically, this project focuses on:
+1.	Real-Time Messaging: Implementing instant data exchange using modern client-server architecture and technologies like WebSockets (Pusher) for low latency.
+2.	AI Assistant Integration: Embedding an intelligent conversational model (Gemini) to provide contextual, automated support within the chat workflow.
+3.	Secure & Scalable Backend: Utilizing secure authentication (OAuth) and modern databases (MongoDB/Prisma) for efficient data management.
+4.	Responsive UI/UX: Designing an intuitive and highly usable interface (Next.js/React/Tailwind) that works seamlessly across devices.
+1.3 Related works
+The concept of a real-time messenger integrated with an AI assistant has been explored by major technology companies, setting high industry standards:
+•	Meta Platforms (Messenger): While possessing robust real-time chat capabilities, the integration of generative AI features is relatively recent and often requires separate tools or specific commands.
+•	Specific AI Chat Applications ( ChatGPT, Gemini): These focus purely on conversational AI and lack the core functionality of a user-to-user real-time messaging platform.
+This project distinguishes itself by tightly coupling these two systems: real-time messaging and the AI assistant into a single, cohesive user experience, focusing on scalability and modern full-stack implementation.
+1.4 Project structure
+INTRODUCTION
+CHAPTER 1. THEORETICAL BASIS
+CHAPTER 2. SYSTEM ANALYSIS AND DESIGN
+CHAPTER 3. IMPLEMENTATION AND RESULTS
+CONCLUSION
+CHAPTER 1. THEORETICAL BASIS
+1.1 Frontend technologies
+1.1.1 Next.js 15
+The application utilizes Next.js 15, utilizing the latest Full-stack capabilities [1].
+•	App Router: Implements the /app directory architecture to support nested layouts and React Server Components (RSC), enabling a hybrid rendering approach where static UI elements are server-rendered for performance while interactive chat components are client-hydrated.
+•	Server Actions: Replaces traditional API endpoints for data mutations. Form submissions (e.g., sending messages) invoke server-side functions directly from client components, simplifying the data flow and reducing latency [2].
+•	Turbopack: Leveraged for rapid development iterations, providing instant HMR (Hot Module Replacement) to maintain developer velocity.
+
+  
+Figure 1.1: Next.js 
+1.1.2 React JS
+The UI is powered by React 19 (RC), focusing on concurrent rendering and simplified state management [3].
+•	Actions API: Utilizes useActionState and useFormStatus to automatically handle pending states and optimistic updates. This ensures the chat interface remains responsive and provides immediate visual feedback without complex useEffect chains [4].
+•	The use API: Streamlines resource fetching by reading Promises and Context directly in the render phase, facilitating efficient access to user sessions and theme preferences across the component tree.
+
+ 
+
+Figure 1.2: React JS
+1.1.3 TypeScript
+TypeScript serves as the primary language, enforcing static type safety across the full stack [5].
+•	Strict Typing: Core entities are defined with strict interfaces, preventing runtime errors by ensuring data integrity before compilation.
+•	End-to-End Safety: Integration with Prisma generates auto-synchronized types, ensuring that database query results perfectly match the props expected by React components.
+
+ 
+
+Figure 1.3: TypeScript 
+1.1.4 Tailwind CSS 
+Styling is managed by Tailwind CSS v4, utilizing the new high-performance Oxide engine [6].
+•	Zero-Runtime Overhead: Styles are compiled to static CSS at build time, ensuring minimal impact on client-side performance.
+•	CSS-First Configuration: Theme settings are defined natively in CSS variables rather than JavaScript, allowing for dynamic, browser-native theming (Dark/Light mode) and faster build times.
+
+ 
+
+Figure 1.4: Tailwind CSS  
+1.2 Backend technologies
+1.2.1 Next.js API Routes (Serverless)
+Backend logic operates via Next.js API Routes, deploying RESTful endpoints as serverless functions. This architecture allows for automatic scaling based on traffic demand, efficiently handling intermittent bursts of chat activity without maintaining a dedicated server [1].
+
+ 
+
+Figure 1.5: Next.js API Routes  
+1.2.2 Prisma ORM
+Prisma acts as the type-safe interface for the MongoDB database [7].
+•	Declarative Schema: The schema.prisma file serves as the single source of truth, defining models and relationships in a human-readable format.
+•	Type-Safe Queries: Prisma Client auto-generates TypeScript types, enabling autocomplete for database queries and catching invalid field access at compile time.
+
+ 
+
+Figure 1.6: Prisma 
+1.2.3 MongoDB
+MongoDB is a NoSQL document database, is selected for its flexibility in handling unstructured chat data [8].
+•	Document Model: Stores data in BSON format, mapping directly to JSON objects used in the application. This is ideal for variable-structure data like chat history containing text, images, and system alerts.
+•	Scalability: Supports horizontal scaling (Sharding), ensuring the system can handle expanding data volumes and concurrent user connections efficiently.
+
+ 
+
+Figure 1.7: MongoDB 
+1.2.4 Real-time Communication (Pusher)
+Pusher Channels provides the WebSocket infrastructure for instant messaging [9].
+•	Pub/Sub Architecture: Decouples message sending from receiving. The backend publishes events (messages:new) to specific conversation channels, which subscribed clients receive instantly.
+•	Presence Channels: Tracks active WebSocket connections to implement real-time "Online/Offline" status indicators and "Typing..." notifications without polling the database.
+
+ 
+Figure 1.8: Pusher 
+1.2.5 Authentication (NextAuth.js )
+NextAuth.js (Auth.js v5) secures the application with a comprehensive authentication solution [10].
+•	Hybrid Strategy: Supports both OAuth (Google, GitHub) for frictionless onboarding and Credentials (Email/Password) for standard access.
+•	Session Persistence: Utilizes the Prisma Adapter to store secure, encrypted sessions in MongoDB, ensuring user login states persist across server restarts and deployments.
+ 
+Figure 1.9: NextAuth.js
+1.2.6 AI Integration (Google Gemini API)
+The AI Chatbot is powered by the Google Gemini API via the Google AI SDK [11].
+•	Contextual Generation: The implementation feeds recent chat history into the model's context window, allowing Gemini to understand conversation flow and provide relevant, context-aware responses rather than isolated answers.
+•	Multimodal Capabilities: Leverages Gemini's ability to process natural language queries to assist users with information retrieval and content generation directly within the chat interface.
+
+ 
+
+Figure 1.10: Google Gemini API 
+
+
+
+
+
+
+
+
+
+CHAPTER 2. SYSTEM ANALYSIS AND DESIGN
+2.1 Requirement analysis
+2.1.1 User requirements
+Based on the system actors, which include the Authenticated User (a registered member) and the AI Assistant (System Agent), the following user stories define the core interactions:
+
+ID	As a (Role)	I want to
+ (Action)	So that
+ (Benefit)
+US01	Visitor
+	Register an account using email/password or Social Login (Google/GitHub)
+	I can access the application securely and save my data.
+US02	User	Update my profile details (name, avatar)
+	I can personalize my identity within the chat community.
+US03	User	View a list of other active users
+	I can find friends or colleagues to start a conversation with.
+
+US04	User	Create a 1-on-1 or Group conversation
+	I can communicate privately or collaborate with multiple people simultaneously.
+
+US05	User	Send text, images, and file attachments
+	I can share diverse types of information effectively.
+
+US06	User	See real-time updates (new messages, seen receipts)
+	I know when my messages are delivered and read without refreshing the page.
+
+US07	User	See who is currently online
+	I know who is available for an immediate response.
+US08	User	Chat with the AI Assistant (Gemini)
+	I can get instant answers, draft content, or retrieve information without leaving the app.
+
+US09	User	Unsend or delete my messages	I can remove accidental or incorrect messages from the conversation history.
+
+2.1.2 Functional requirements
+Module 1: User Authentication & Management
+•	Registration: The system must allow users to create accounts via standard credentials (email/password with bcrypt hashing) or OAuth providers (Google, GitHub).
+•	Session Management: The system must maintain secure sessions using JWT (JSON Web Tokens) via NextAuth.js to validate user identity on every request.
+•	Profile Management: Users must be able to view and edit their display name, email, and upload a profile picture.
+Module 2: Conversation Management
+•	Direct Chat (1-on-1): The system ensures only one unique conversation exists between any two distinct users.
+•	Group Chat: Users can create groups with a minimum of 3 participants. The system must support adding/removing members and renaming the group.
+•	Conversation Listing: The sidebar must display a list of all conversations, sorted by the most recent activity, showing unread indicators and the last message preview.
+Module 3: Messaging System
+•	Multi-format Messaging: The system must support sending plain text, image files (via Cloudinary integration), and document attachments.
+•	Message Interactions: Users must be able to "Unsend" (delete) their own messages and "React" to messages using a predefined set of emojis.
+•	Read Receipts: The system must track and display "Seen" status for each message in real-time when recipients open the chat.
+Module 4: Real-time Synchronization
+•	Event Broadcasting: Using Pusher Channels, the system must broadcast events (message:new, conversation:update) instantly to all connected clients.
+•	Live Updates: The UI must update immediately upon receiving these events without requiring a manual page reload.
+Module 5: Presence & Status
+•	Online/Offline Status: The system must utilize WebSocket presence channels to track user connectivity and display an "Active" green dot indicator on user avatars.
+Module 6: UI/UX & Layout
+•	Responsive Layout: The application must feature a dual-pane layout (Sidebar + Chat Window) that collapses into a single pane on mobile devices.
+•	Information Drawer: A slide-out drawer must provide detailed context about the current conversation (e.g., list of members in a group, shared media).
+Module 7: Security & Permissions
+•	Access Control: API endpoints must verify that the requesting user is a participant of the target conversation before fetching or sending data.
+•	Data Protection: Sensitive data (passwords) must never be stored in plain text. File uploads must be restricted to safe file types to prevent malicious execution.
+Module 8: AI Assistant Integration
+•	Gemini Integration: The system must integrate with the Google Gemini API to provide an automated conversational agent.
+•	Contextual Memory: The AI must receive recent message history to provide context-aware responses, rather than treating each message as an isolated query.
+2.1.3 Non-functional requirements
+1.	Performance:
+•	Response Time: Read operations (fetching chat history) should complete within 1 second under normal load.
+•	Real-time Latency: Message delivery and synchronization across clients should occur within 1.5 seconds.
+•	Concurrency: The system should support multiple concurrent users sending messages simultaneously without data loss.
+2.	Usability:
+•	Intuitiveness: The interface should follow modern chat application standards (Messenger, WhatsApp) to minimize the user learning curve.
+•	Feedback: The system must provide clear visual feedback for actions (e.g., loading spinners during upload, toast notifications for errors).
+3.	Security:
+•	Authentication: All protected routes must require a valid session token.
+•	Authorization: Users cannot access conversations they are not part of.
+•	Sanitization: All user inputs must be sanitized to prevent XSS (Cross-Site Scripting) and Injection attacks.
+2.1.4 System requirements
+1.	Software Requirements (Runtime & Dependencies)
+•	Backend Runtime: Node.js (v18.x LTS or higher).
+•	Framework: Next.js 15 (App Router architecture).
+•	Database: MongoDB (v6.0+) accessed via Prisma ORM.
+•	External Services:
+o	Pusher: For WebSocket infrastructure.
+o	Cloudinary: For media storage and optimization.
+o	Google Cloud: For Gemini AI API access.
+2.	Hardware Requirements (Client)
+•	Device: Desktop, Laptop, Tablet, or Smartphone.
+•	Operating System: Windows 10/11, macOS, Android, or iOS.
+•	Web Browser: Modern browsers supporting ES2020+ (Chrome, Firefox, Safari, Edge).
+3.	Hardware Requirements (Server/Deployment)
+•	Platform: Vercel (recommended for Serverless) or a VPS (Linux Ubuntu 20.04+).
+•	Specs: Minimum 1 vCPU and 2GB RAM for low-traffic production environments.
+2.2 Use case diagram
+2.2.1 Diagrams
+ 
+Figure 2.1: Use case diagram
+
+2.2.2 Use case specifications
+Use Case 1: Register / Login
+
+Attribute	Description
+Use case name
+	Register / Login
+Actor
+	Unauthenticated User (Visitor)
+
+
+Description
+	Authenticate users via email/password or OAuth (Google/GitHub). Handles new registrations and linking providers to existing accounts.
+
+Pre-conditions
+	The user is currently logged out.
+
+Post-conditions
+	Authenticated session established (JWT or session cookie), user redirected to chat UI.
+
+Main Flow
+	1.	User accesses /login.
+2.	User chooses sign-in method: Credentials or OAuth.
+3.	For Credentials: User enters email/password and submits. System hashes password and compares to stored hash (bcrypt).
+4.	For OAuth: User is redirected to Google/Github, authenticates externally. Provider redirects back; system verifies returned access token.
+5.	System looks up or creates user, issues session/JWT, and redirects to app home.
+Alternative Flows 	A1. Invalid credentials: Error shown (code: throw new Error("Invalid credentials")).
+A2. Existing email with new OAuth: System links provider account to the existing email and logs user in.
+A3. Missing input: Client disables sign-in button.
+
+Use Case 2: Create Group Chat
+
+Attribute	Description
+Use case name	Create Group Chat
+
+Actor
+	Authenticated User
+
+
+Description
+	Start a group conversation with ≥3 participants, unique name, and membership list.
+
+Pre-conditions
+	User is authenticated, user list is loaded.
+
+Post-conditions
+	New Conversation is created in DB, all invited members receive a real-time event.
+
+Main Flow
+	1.	User clicks "Create Group Chat".
+2.	User enters a group name.
+3.	User selects at least 2 users (in addition to themselves).
+4.	Validation: If not enough users or no name, system disables creation.
+5.	User clicks "Create".
+6.	System creates group in DB.
+7.	Stores members, assigns all userIds including creator.
+8.	System triggers Pusher events to all group emails.
+9.	App UI refreshes instantly for all involved users.
+Alternative Flows 	A1. Missing fields: "Create" button remains disabled; error toast shown if attempted via hack.
+A2. API/database errors: UI shows "Something went wrong".
+Use case 3: Send Message
+
+Attribute	Description
+Use case name
+	Send Message (Text / Image / File)
+
+Actor
+	Authenticated User
+
+
+Description
+	Send message content (text, image, file) to active conversation.
+
+Pre-conditions
+	User is a member of the active conversation.
+
+Post-conditions
+	Message is delivered and displayed to all members in real-time.
+
+Main Flow
+	1.	User types text and/or attaches image/file in input bar.
+2.	User clicks "Send".
+3.	System validates session and conversation membership.
+4.	Stores Message in DB 
+5.	System updates and broadcasts "messages:new" event via Pusher.
+6.	Conversation/message panels update instantly in all open clients.
+Alternative Flows 	A1. Network/Cloudinary error: Message send fails, client shows error, message retained in input for retry.
+A2. File validation: If size/format is invalid, upload is rejected and user is alerted.
+
+Use Case 4: Interact with Message
+
+Attribute	Description
+Use case name
+	Interact with Message (Reply, React, Unsend)
+
+Actor
+	Authenticated User
+
+
+Description
+	Allows reply, reaction, or deletion for eligible messages.
+
+Pre-conditions
+	User sees message in a joined conversation.
+
+Post-conditions
+	UI reflects the interaction (reply thread reference, reaction icon, deletion placeholder).
+
+Main Flow
+	1.	React (Emoji): User clicks emoji; system creates or toggles Reaction in DB; notifies via Pusher; UI updates emoji count.
+2.	Reply: User clicks "Reply", message input is prefilled as a reply thread; DB links replyToId; UI displays nested structure.
+3.	Unsend/Delete: User chooses "Delete" on own message; system marks with isDeleted: true (retains ID for thread); UI shows "message recalled" placeholder; Pusher triggers update.
+Alternative Flows 	A1. Unauthorized action: If user tries to delete another's message, action is Forbidden, error returned, and UI shows no option.
+
+Use case 5: Delete Conversation
+Attribute	Description
+Use case name
+	Delete Conversation
+
+Actor
+	Authenticated User
+
+
+Description
+	Remove conversation from a user's list (logical delete: self only/group context).
+
+Pre-conditions
+	User is a member of the conversation.
+
+Post-conditions
+	Conversation disappears from user's view; members notified via Pusher if needed.
+
+Main Flow
+	1.	User clicks "Delete Conversation" in sidebar or group profile.
+2.	UI requests confirmation (ConfirmModal).
+3.	Upon confirmation, system checks membership and permission, removes or marks conversation for the user.
+4.	 UI panel updates to exclude conversation.
+
+Use case 6: Chat with AI Assistant
+Attribute	Description
+Use case name
+	Chat with AI Assistant (Gemini)
+
+Actor
+	Authenticated User, AI Assistant (Gemini)
+
+
+Description
+	Access AI-only chat, ask questions, and receive automated, context-aware answers.
+
+Pre-conditions
+	User is a member of the "AI" conversation 
+
+Post-conditions
+	User sees AI's response in real time; all messages logged in DB.
+
+Main Flow
+	1.	User enters a message in the Gemini AI chat window.
+2.	System stores user's message in DB.
+3.	Server composes prompt with user message, past memory (DB), and knowledge base.
+4.	Calls Google Gemini API for response.
+5.	Receives AI reply text, stores as a new message.
+6.	Broadcasts AI reply via Pusher, updates UI for user to see.
+Alternative Flows 	A1. AI API error: System inserts error, sends as normal message; UI displays notification.
+
+
+Use Case 7: Manage Profile
+
+Attribute	Description
+Use case name
+	Manage Profile
+
+Actor
+	Authenticated User
+
+
+Description
+	View and update basic user profile (name, avatar image).
+
+Pre-conditions
+	User is authenticated.
+
+Post-conditions
+	Updates are saved and reflected across all UIs.
+
+Main Flow
+		1.	User opens "Profile".
+2.	User modifies display name and/or profile image.
+3.	System updates user DB entry.
+4.	All open UIs/panels reflect change instantly.
+
+
+2.3 Activity diagram
+2.3.1 Login activity diagram
+2.3.2 Create conversation activity diagram
+2.3.3 Send message activity diagram
+
+2.3.4 Chat with AI activity diagram
+2.3.5 View conversation list activity diagram
+
+2.4 Sequence diagram
+2.4.1 Login sequence diagram
+ 
+Figure 2.7: Login sequence diagram
+2.4.2 Create conversation sequence diagram
+ 
+Figure 2.8: Create conversation sequence diagram
+2.4.3 Send message sequence diagram
+ 
+Figure 2.9: Send message sequence diagram
+2.4.4 Chat with AI sequence diagram
+ 
+Figure 2.10: Chat with AI sequence diagram
+2.5 State diagram
+2.5.1 Login state diagram
+ 
+Figure 2.11: Login state diagram 
+2.5.2 Create conversation state diagram
+ 
+Figure 2.12: Create conversation state diagram
+
+2.5.3 Send message state diagram
+ 
+Figure 2.13: Send message state diagram 
+2.5.4 Chat with AI state diagram
+
+ 
+Figure 2.14: Chat with AI state diagram 
+2.6 Class diagram
+2.6.1 Classes, Attributes, Methods
+Classes	Attributes	Methods
+User	id, name, email, emailVerified?, image?, hashedPassword?, createdAt, updatedAt, conversationIds[], seenMessageIds[]	findUnique(), findMany(), create()
+Conversation	id, createdAt, lastMessageAt, name?, isGroup?, userIds[]	findUnique(), findMany(), create(), update(), deleteMany()
+Message	id, body?, image?, fileUrl?, fileName?, fileSize?, createdAt, seenIds[], conversationId, senderId, isDeleted, replyToId?	findUnique(), findMany(), create(), update()
+Reaction	id, content, createdAt, userId, messageId	findFirst(), create(), update(), delete()
+Acccount	id, userId, type, provider, providerAccountId, refresh_token?, access_token?, expires_at?, token_type?, scope?, id_token?, session_state?	
+2.6.2 Diagram
+ 
+Figure 2.15: Class diagram
+
+
+
+
+CHAPTER 3. IMPLEMENTATION AND RESULTS
+3.1 Login interface
+ 
+
+Figure 3.1: Login interface 
+3.1.1 Purpose
+•	To provide a secure gateway for users to access the application.
+•	To facilitate user registration via two methods: standard email/password credentials or fast sign-up using third-party OAuth providers (Google and GitHub).
+3.1.2 Design rationable
+•	Minimalist & Clean Layout: The interface is designed to reduce cognitive load, focusing only on necessary input fields (email, password) to minimize friction during the authentication process.
+•	Dual Authentication: Clear placement of the "Sign in" button and the social login options (Google, GitHub) ensures users can choose their preferred authentication method quickly and securely.
+3.2 Dashboard interface
+ 
+
+Figure 3.2: Dashboard interface
+3.2.1 Purpose:
+•	To serve as the application's central hub after authentication.
+•	To display all active conversations (1-on-1, Group, and AI) and the real-time presence status of contacts.
+3.2.2 Design rationale:
+•	Dual-Pane Layout: Follows the standard messenger paradigm with a narrow sidebar for navigation/settings (left) and a wider pane for the conversation list/active chat (center). This design maximizes usability on desktop screens.
+•	Real-time Status: The use of green dots next to user clearly signals their Online Status leveraging Pusher's Presence Channels.
+3.3 User-to-User Chat interface
+ 
+Figure 3.3: User-to-User Chat interface
+3.3.1 Purpose
+•	To facilitate instant, two-way communication between authenticated users.
+•	To demonstrate the core real-time capabilities of the Pusher (WebSocket) integration.
+•	To showcase support for diverse message types (text and media).
+3.3.2 Design  rationable
+•	Clear Attribution & Readability: Messages use standard bubble alignment: right for the sender (User) and left for the recipient. This ensures clear message ownership and flow.
+•	Real-time Media & Storage: The interface displays embedded images, confirming successful upload and retrieval via the Cloudinary service.
+•	Low Latency & Sync: The UI updates instantaneously upon receiving messages, fulfilling the Real-time requirement. Message data is utilized to implement read receipts for comprehensive status tracking.
+
+
+3.4 Group chat interface 
+
+ 
+
+Figure 3.4: Group chat interface 
+
+3.4.1 Purpose
+•	To demonstrate multi-user communication and shared context management.
+•	To confirm the system's ability to handle simultaneous updates and deliver messages from multiple distinct users in a single channel.
+3.4.2 Design rationable
+•	Multi-User Attribution: Messages from different users are clearly attributed using distinct avatars and alignments, verifying the correct handling of group messaging logic.
+•	Shared Media & Real-time Sync: The group successfully displays shared media (image), proving the media upload and real-time broadcasting mechanism works reliably in a many-to-many context.
+
+3.5 AI Chatbot Assistant interface
+
+ 
+
+Figure 3.5: AI Chatbot Assistant interface
+
+3.5.1 Purpose
+•	Core Demonstration: To showcase the application's unique value proposition: seamless integration of the Google Gemini API.
+•	Context & Memory: To prove the system's ability to maintain context (memory) and utilize an internal knowledge base when generating responses.
+3.5.2 Design rationable
+•	Integrated Interface: The AI is visually treated as a normal user, ensuring conversation flow feels natural and non-disruptive.
+•	Contextual Proof: The dialogue demonstrates the AI's ability to answer follow-up questions confirming that past messages (contextual memory) were successfully fed to the Gemini API for processing.
+3.6 User profile management interface
+ 
+
+Figure 3.6: 3.6 User profile management interface
+
+3.6.1 Purpose
+•	To provide the user with full control over their public identity within the application.
+•	To ensure a seamless update experience by allowing immediate modification of the display name and avatar, enhancing personalization.
+3.6.2 Design rationable
+•	Modal Dialog: The settings are contained within a focused modal (pop-up) interface, preventing users from losing their current context (chat window).
+•	Direct Edit: The layout is straightforward, featuring only two editable fields (Name and Photo), minimizing complexity and reducing the chance of user error.
+•	Save Confirmation: The prominent "Save" button confirms the action, while the presence of the "Change" button next to the avatar confirms the successful integration with the media storage service (Cloudinary) for profile pictures.
+ 
+CONCLUSION
+4.1 Key Results
+•	Robust Real-time Core: The implementation of Pusher Channels ensured low-latency, real-time message delivery and accurate online status tracking, fulfilling the core "Real-time Messenger" requirement.
+•	Seamless AI Integration: The Google Gemini API was successfully embedded as a dedicated conversational agent, providing context-aware answers by leveraging user chat history, which is the unique value proposition of this project.
+•	Modern Full-Stack Architecture: The application was built on a modern, scalable stack (Next.js 15, React 19, Tailwind v4, MongoDB/Prisma), demonstrating proficiency in developing production-ready, type-safe applications (TypeScript).
+•	Comprehensive Features: Successfully implemented complex features including OAuth and Credentials authentication, Group Chat creation, media upload (Cloudinary), and message interactions (Reactions and Deletion).
+4.2 Knowledge and eperience gained
+•	Deep Architectural Understanding: Gained hands-on experience designing and implementing a microservice-like architecture using Next.js API Routes and Serverless functions.
+•	Real-time Protocol Mastery: Learned how to effectively utilize Pub/Sub models (Pusher) over raw WebSockets for scalable real-time event broadcasting.
+•	AI Development Workflow: Mastered the workflow for calling, structuring prompts, and managing context/memory in a conversational LLM (Gemini API).
+•	Data Modeling: Applied advanced data modeling techniques (Prisma ORM with MongoDB) to handle complex relationships required by chat applications (many-to-many users-conversations, nested message replies).
+4.3 Limitations
+•	Voice and Video: The current version focuses strictly on text and media; it lacks support for real-time voice and video calls (WebRTC integration).
+•	End-to-End Encryption: For enhanced security, messages are currently encrypted in transit (HTTPS) but are not end-to-end encrypted.
+4.4 Future Development Directions
+
+
+•	WebRTC Integration: Implement WebRTC technology to enable peer-to-peer Voice and Video Calling within both direct and group conversations.
+•	Search and Archiving: Develop a full-text search index (e.g., using MongoDB Atlas Search) to enable fast searching of message history across all conversations.
+•	End-to-End Encryption (E2EE): Implement an E2EE protocol (e.g., Signal Protocol) to ensure only participants can read conversation content.
+•	Performance Optimization: Implement caching mechanisms (e.g., Redis) for frequently accessed data (user profiles, conversation lists) to improve read speed and reduce database load.
+ 
+REFERENCE DOCUMENT
+[1] Vercel. (2024). Next.js 15 Documentation. Available: https://nextjs.org/docs/15
+[2] Vercel. (2024). Server Actions and Mutations. Available: https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations
+[3] Meta Platforms. (2024). React 19 Release Candidate. Available: https://react.dev/blog/2024/04/25/react-19
+[4] Meta Platforms. (2024). React 19: Actions. Available: https://react.dev/reference/rsc/server-actions
+[5] Microsoft. (2024). TypeScript: Typed JavaScript at Any Scale. Available: https://www.typescriptlang.org/
+[6] Tailwind Labs. (2024). Tailwind CSS v4.0 Alpha - A new engine for a new era. Available: https://tailwindcss.com/blog/tailwindcss-v4-alpha
+[7] Prisma Data. (2024). Prisma ORM Documentation. Available: https://www.prisma.io/docs
+[8] MongoDB, Inc. (2024). The MongoDB 7.0 Manual. Available: https://www.mongodb.com/docs/manual/
+[9] Pusher. (2024). Pusher Channels Documentation. Available: https://pusher.com/docs/channels
+[10] Balázs Orbán. (2024). Auth.js (NextAuth.js) v5 Documentation. Available: https://authjs.dev/
+[11] Google. (2024). Google AI for Developers: Gemini API. Available: https://ai.google.dev/docs

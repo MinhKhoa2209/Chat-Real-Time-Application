@@ -65,6 +65,8 @@ model Conversation {
   messagesSId String[] @db.ObjectId
   
   deletedForIds String[] @db.ObjectId @default([])
+
+  @@index([lastMessageAt(sort: Desc)])
 }
 
 model Message {
@@ -97,6 +99,8 @@ model Message {
   forwardedFrom   User?    @relation("ForwardedFrom", fields: [forwardedFromId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   reactions Reaction[]
+
+  @@index([conversationId, createdAt(sort: Desc)])
 }
 
 model Reaction {

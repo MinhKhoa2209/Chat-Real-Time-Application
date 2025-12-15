@@ -17,6 +17,17 @@ export async function POST(request: Request) {
 
     const AI_BOT_ID = "6926f7de1fca804c3b97f53c"; 
 
+    // Get conversation users for Pusher updates
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: {
+        users: { select: { id: true, name: true, email: true, image: true } },
+        name: true,
+        isGroup: true,
+        image: true,
+      },
+    });
+
     // Create and send each message with small delay to feel more natural
     const createdMessages = [];
     for (let i = 0; i < aiMessages.length; i++) {
@@ -59,7 +70,54 @@ export async function POST(request: Request) {
         },
       });
 
+      // Update conversation lastMessageAt
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: new Date() },
+      });
+
       await pusherServer.trigger(conversationId, "messages:new", newMessage);
+      
+      // Send conversation:update to all users for conversation list
+      if (conversation?.users) {
+        const conversationUpdate = {
+          id: conversationId,
+          name: conversation.name,
+          isGroup: conversation.isGroup,
+          image: conversation.image,
+          users: conversation.users,
+          lastMessageAt: new Date(),
+          messages: [{
+            id: newMessage.id,
+            body: newMessage.body,
+            image: newMessage.image,
+            fileUrl: null,
+            fileName: null,
+            createdAt: newMessage.createdAt,
+            senderId: newMessage.senderId,
+            isDeleted: false,
+            sender: {
+              id: newMessage.sender.id,
+              name: newMessage.sender.name,
+              email: newMessage.sender.email,
+              image: newMessage.sender.image,
+            },
+            seen: newMessage.seen.map(u => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+            })),
+            reactions: [],
+          }],
+        };
+
+        for (const user of conversation.users) {
+          if (user.email) {
+            await pusherServer.trigger(user.email, "conversation:update", conversationUpdate);
+          }
+        }
+      }
+      
       createdMessages.push(newMessage);
     }
 

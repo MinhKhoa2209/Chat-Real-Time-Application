@@ -76,41 +76,33 @@ export async function POST(request: Request) {
       },
     });
 
-    // Get conversation before update to check who deleted it
-    const conversationBeforeUpdate = await prisma.conversation.findUnique({
+    // Update conversation lastMessageAt
+    const updatedConversation = await prisma.conversation.update({
       where: { id: conversationId },
-      select: { deletedForIds: true },
+      data: { lastMessageAt: new Date() },
+      select: { 
+        users: { select: { id: true, name: true, email: true, image: true } }, 
+        lastMessageAt: true,
+        name: true,
+        isGroup: true,
+        image: true,
+        deletedForIds: true,
+      },
     });
-    const usersWhoDeleted = conversationBeforeUpdate?.deletedForIds || [];
 
-    // Update conversation lastMessageAt and restore if deleted
-    const [updatedConversation] = await Promise.all([
-      prisma.conversation.update({
-        where: { id: conversationId },
-        data: { 
-          lastMessageAt: new Date(),
-        },
-        select: { 
-          users: { select: { email: true, id: true } }, 
-          lastMessageAt: true,
-          deletedForIds: true,
-          id: true,
-          name: true,
-          isGroup: true,
-        },
-      }),
-    ]);
-
-    // Remove all users from deletedForIds using MongoDB $set
-    await prisma.$runCommandRaw({
-      update: "Conversation",
-      updates: [
-        {
-          q: { _id: { $oid: conversationId } },
-          u: { $set: { deletedForIds: [] } },
-        },
-      ],
-    });
+    // Clear deletedForIds if any users had deleted this conversation
+    // (so they will see it again with new messages)
+    if (updatedConversation.deletedForIds && updatedConversation.deletedForIds.length > 0) {
+      await prisma.$runCommandRaw({
+        update: "Conversation",
+        updates: [
+          {
+            q: { _id: { $oid: conversationId } },
+            u: { $set: { deletedForIds: [] } },
+          },
+        ],
+      });
+    }
 
     try {
       // Reduce payload size for Pusher (max 10KB)
@@ -158,9 +150,13 @@ export async function POST(request: Request) {
         pusherServer.trigger(conversationId, "messages:new", pusherPayload),
       ];
 
-      // For conversation list, send last message only (not full conversation)
+      // For conversation list, send last message with full conversation data
       const conversationUpdate = {
         id: conversationId,
+        name: updatedConversation.name,
+        isGroup: updatedConversation.isGroup,
+        image: updatedConversation.image,
+        users: updatedConversation.users,
         lastMessageAt: updatedConversation.lastMessageAt,
         messages: [{
           id: newMessage.id,
@@ -193,34 +189,10 @@ export async function POST(request: Request) {
       // Add conversation updates for all users
       for (const user of updatedConversation.users) {
         if (user.email) {
-          // If user had deleted conversation, send conversation:new to restore it
-          if (usersWhoDeleted.includes(user.id)) {
-            // Fetch full conversation to restore
-            const fullConversation = await prisma.conversation.findUnique({
-              where: { id: conversationId },
-              include: {
-                users: true,
-                messages: {
-                  take: 1,
-                  orderBy: { createdAt: 'desc' },
-                  include: {
-                    sender: true,
-                    seen: true,
-                  },
-                },
-              },
-            });
-            
-            if (fullConversation) {
-              pusherPromises.push(
-                pusherServer.trigger(user.email, "conversation:new", fullConversation)
-              );
-            }
-          } else {
-            pusherPromises.push(
-              pusherServer.trigger(user.email, "conversation:update", conversationUpdate)
-            );
-          }
+          // Send conversation update to all users
+          pusherPromises.push(
+            pusherServer.trigger(user.email, "conversation:update", conversationUpdate)
+          );
         }
       }
 

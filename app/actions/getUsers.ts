@@ -15,11 +15,16 @@ const getUsers = async () => {
                 NOT: {
                     email: session.user.email,
                 },
-            }
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true,
+            },
         });
         return users;
-    } catch (error:any) {
-        console.error("Error fetching users:", error);
+    } catch {
         return [];
     }
 }

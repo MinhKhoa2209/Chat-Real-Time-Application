@@ -13,8 +13,11 @@ interface IParams {
 const ConversationId = async ({ params }: { params: IParams }) => {
   const { conversationId } = await params;
   
-  const conversation = await getConversationById(conversationId);
-  const messages = await getMessages(conversationId);
+  // Fetch in parallel for better performance
+  const [conversation, messages] = await Promise.all([
+    getConversationById(conversationId),
+    getMessages(conversationId),
+  ]);
 
   if (!conversation) {
     return (

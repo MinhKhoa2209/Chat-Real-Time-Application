@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import prisma from "@/app/libs/prismadb";
 import getCurrentUser from "@/app/actions/getCurrentUser";
 
 interface IParams {
@@ -14,16 +13,8 @@ export async function POST(request: Request, { params }: { params: Promise<IPara
     }
 
     const { callId } = await params;
-
-    const call = await prisma.call.update({
-      where: { id: callId },
-      data: {
-        status: "ongoing",
-        answeredAt: new Date(),
-      },
-    });
-
-    return NextResponse.json(call);
+    console.log("[CALL_ACCEPT] Call accepted:", callId, "by user:", currentUser.id);
+    return NextResponse.json({ success: true, callId });
   } catch (error) {
     console.error("CALL_ACCEPT_ERROR:", error);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

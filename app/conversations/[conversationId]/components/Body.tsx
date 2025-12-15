@@ -2,10 +2,10 @@
 
 import useConversation from "@/app/hooks/useConversation";
 import { FullMessageType } from "@/app/types";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback, memo } from "react";
 import MessageBox from "./MessageBox";
 import axios from "axios";
-import { pusherClient } from "@/app/libs/pusher";
+import { getPusherClient } from "@/app/libs/pusher";
 import { find } from "lodash";
 import { useConversationContext } from "../ConversationContext";
 
@@ -15,27 +15,31 @@ interface BodyProps {
 
 const AI_SENDER_IDENTIFIER = "6926f7de1fca804c3b97f53c";
 
+// Memoized MessageBox wrapper
+const MemoizedMessageBox = memo(MessageBox);
+
 const Body: React.FC<BodyProps> = ({ initialMessages }) => {
   const [messages, setMessages] = useState(initialMessages);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { conversationId } = useConversation();
   const { setReplyTo } = useConversationContext();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const seenSentRef = useRef(false);
 
-  // Get current user ID
+  // Get current user ID - only once
   useEffect(() => {
     axios.get("/api/user/me")
       .then((res) => setCurrentUserId(res.data.id))
-      .catch((err) => console.error("Failed to get user:", err));
+      .catch(() => {});
   }, []);
 
-  const isBotMessage = (message: FullMessageType): boolean => {
-    return message.sender.id === AI_SENDER_IDENTIFIER;
-  };
+  const isBotMessage = useCallback((message: FullMessageType): boolean => {
+    return message.sender?.id === AI_SENDER_IDENTIFIER;
+  }, []);
 
+  // Optimized message sorting with memoization
   const sortedMessages = useMemo(() => {
-    // Filter out hidden messages for current user
-    const visibleMessages = messages.filter((message: any) => {
+    const visibleMessages = messages.filter((message: FullMessageType & { hiddenForIds?: string[] }) => {
       if (!currentUserId) return true;
       const hiddenForIds = message.hiddenForIds || [];
       return !hiddenForIds.includes(currentUserId);
@@ -46,83 +50,82 @@ const Body: React.FC<BodyProps> = ({ initialMessages }) => {
       const timeB = new Date(b.createdAt).getTime();
       const timeDiff = timeA - timeB;
 
-      if (timeDiff !== 0) {
-        return timeDiff;
-      }
+      if (timeDiff !== 0) return timeDiff;
 
       const isBotA = isBotMessage(a);
       const isBotB = isBotMessage(b);
 
-      if (isBotA && !isBotB) {
-        return 1;
-      }
-      if (!isBotA && isBotB) {
-        return -1;
-      }
+      if (isBotA && !isBotB) return 1;
+      if (!isBotA && isBotB) return -1;
 
       return a.id.localeCompare(b.id);
     });
-  }, [messages, currentUserId]);
+  }, [messages, currentUserId, isBotMessage]);
 
+  // Debounced seen API call - only once per conversation
   useEffect(() => {
-    // Debounce seen API call
+    if (seenSentRef.current) return;
+    seenSentRef.current = true;
+
     const timer = setTimeout(() => {
       axios.post(`/api/conversations/${conversationId}/seen`).catch(() => {});
-    }, 500);
-    
+    }, 300);
+
     return () => clearTimeout(timer);
   }, [conversationId]);
 
+  // Pusher subscription with optimized handlers
   useEffect(() => {
-    if (!conversationId) {
-      return;
-    }
-    
+    if (!conversationId) return;
+
+    const pusherClient = getPusherClient();
     const channel = pusherClient.subscribe(conversationId);
-    
-    bottomRef?.current?.scrollIntoView({ behavior: 'smooth' });
+
+    // Scroll to bottom on mount
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+    });
 
     const messageHandler = (message: FullMessageType) => {
-      // Mark as seen asynchronously without blocking UI
+      // Mark as seen - non-blocking
       axios.post(`/api/conversations/${conversationId}/seen`).catch(() => {});
 
       setMessages((current) => {
-        if (find(current, { id: message.id })) {
-          return current;
-        }
-        
-        // If message has replyTo but no sender, try to find it from existing messages
+        if (find(current, { id: message.id })) return current;
+
+        // Preserve replyTo sender if missing
         if (message.replyTo && !message.replyTo.sender) {
-          const replyToMessage = current.find(m => m.id === message.replyTo?.id);
+          const replyToMessage = current.find((m) => m.id === message.replyTo?.id);
           if (replyToMessage) {
-            message.replyTo = {
-              ...message.replyTo,
-              sender: replyToMessage.sender,
-            };
+            message.replyTo = { ...message.replyTo, sender: replyToMessage.sender };
           }
         }
-        
+
         return [...current, message];
       });
 
-      // Smooth scroll to bottom
-      setTimeout(() => {
-        bottomRef?.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      // Smooth scroll with requestAnimationFrame
+      requestAnimationFrame(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
     };
 
     const updateMessageHandler = (newMessage: FullMessageType) => {
       setMessages((current) =>
         current.map((currentMessage) => {
           if (currentMessage.id === newMessage.id) {
-            // Preserve replyTo if the update doesn't include it
-            if (!newMessage.replyTo && currentMessage.replyTo) {
-              return {
-                ...newMessage,
-                replyTo: currentMessage.replyTo,
-              };
-            }
-            return newMessage;
+            // IMPORTANT: Preserve existing data if update doesn't include it
+            return {
+              ...currentMessage,
+              ...newMessage,
+              // Always preserve sender from current message if update doesn't have it
+              sender: newMessage.sender || currentMessage.sender,
+              // Preserve other important fields
+              replyTo: newMessage.replyTo || currentMessage.replyTo,
+              seen: newMessage.seen?.length ? newMessage.seen : currentMessage.seen,
+              image: newMessage.image !== undefined ? newMessage.image : currentMessage.image,
+              body: newMessage.body !== undefined ? newMessage.body : currentMessage.body,
+            };
           }
           return currentMessage;
         })
@@ -130,20 +133,19 @@ const Body: React.FC<BodyProps> = ({ initialMessages }) => {
     };
 
     const hideMessageHandler = (data: { messageId: string; userId: string }) => {
-      // Only hide for the user who triggered it
-      if (data.userId === currentUserId) {
-        setMessages((current) =>
-          current.map((message: any) => {
-            if (message.id === data.messageId) {
-              return {
-                ...message,
-                hiddenForIds: [...(message.hiddenForIds || []), data.userId],
-              };
-            }
-            return message;
-          })
-        );
-      }
+      if (data.userId !== currentUserId) return;
+
+      setMessages((current) =>
+        current.map((message: FullMessageType & { hiddenForIds?: string[] }) => {
+          if (message.id === data.messageId) {
+            return {
+              ...message,
+              hiddenForIds: [...(message.hiddenForIds || []), data.userId],
+            };
+          }
+          return message;
+        })
+      );
     };
 
     channel.bind("messages:new", messageHandler);
@@ -154,14 +156,14 @@ const Body: React.FC<BodyProps> = ({ initialMessages }) => {
       channel.unbind("messages:new", messageHandler);
       channel.unbind("message:update", updateMessageHandler);
       channel.unbind("message:hide", hideMessageHandler);
-      pusherClient.unsubscribe(conversationId);
+      getPusherClient().unsubscribe(conversationId);
     };
   }, [conversationId, currentUserId]);
 
   return (
     <div className="flex-1 overflow-y-auto">
       {sortedMessages.map((message, i) => (
-        <MessageBox
+        <MemoizedMessageBox
           isLast={i === sortedMessages.length - 1}
           key={message.id}
           data={message}
@@ -173,4 +175,4 @@ const Body: React.FC<BodyProps> = ({ initialMessages }) => {
   );
 };
 
-export default Body;
+export default memo(Body);

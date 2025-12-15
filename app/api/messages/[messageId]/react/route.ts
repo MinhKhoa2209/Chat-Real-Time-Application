@@ -8,13 +8,27 @@ export async function POST(
   { params }: { params: Promise<{ messageId: string }> }
 ) {
   try {
+    const startTime = Date.now();
     const currentUser = await getCurrentUser();
     const { messageId } = await params;
     const body = await request.json();
     const { content } = body;
 
+    console.log(`[REACT] Start - messageId: ${messageId}, content: ${content}`);
+
     if (!currentUser?.id || !content || !messageId) {
       return new NextResponse("Invalid data", { status: 400 });
+    }
+
+    // Check if message exists first
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { id: true, conversationId: true },
+    });
+
+    if (!message) {
+      console.log(`[REACT] Message not found: ${messageId}`);
+      return new NextResponse("Message not found", { status: 404 });
     }
 
     const existingReaction = await prisma.reaction.findFirst({
@@ -25,87 +39,60 @@ export async function POST(
     });
 
     let reaction;
+    let action = "created";
 
     if (existingReaction) {
       if (existingReaction.content === content) {
         await prisma.reaction.delete({ where: { id: existingReaction.id } });
+        action = "deleted";
       } else {
         reaction = await prisma.reaction.update({
           where: { id: existingReaction.id },
           data: { content },
         });
+        action = "updated";
       }
     } else {
       reaction = await prisma.reaction.create({
         data: {
           content,
-          user: {
-            connect: { id: currentUser.id },
-          },
-          message: {
-            connect: { id: messageId },
-          },
+          userId: currentUser.id,
+          messageId: messageId,
         },
       });
     }
 
-    const updatedMessage = await prisma.message.findUnique({
-      where: { id: messageId },
+    console.log(`[REACT] Reaction ${action} in ${Date.now() - startTime}ms`);
+
+    // Get only necessary data for Pusher
+    const reactions = await prisma.reaction.findMany({
+      where: { messageId },
       include: {
-        sender: true,
-        seen: true,
-        reactions: { include: { user: true } },
-        replyTo: { include: { sender: true } },
-        forwardedFrom: true,
+        user: { select: { id: true, name: true, email: true, image: true } },
       },
     });
 
-    if (updatedMessage) {
-      const pusherPayload = { ...updatedMessage };
+    // Send minimal update via Pusher
+    const pusherPayload = {
+      id: messageId,
+      reactions: reactions.map((r) => ({
+        id: r.id,
+        content: r.content,
+        user: r.user,
+      })),
+    };
 
-      // 1. Loại bỏ thông tin nhạy cảm và nặng của sender
-      if (pusherPayload.sender) {
-        // @ts-ignore: Gán null để giảm size dù TS báo lỗi
-        pusherPayload.sender.hashedPassword = null; 
-      }
+    // Fire and forget
+    pusherServer.trigger(
+      message.conversationId,
+      "message:update",
+      pusherPayload
+    ).catch((err) => console.error("[REACT] Pusher error:", err));
 
-      if (pusherPayload.seen) {
-         // @ts-ignore
-        pusherPayload.seen = pusherPayload.seen.map((user) => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        }));
-      }
-
-      if (pusherPayload.reactions) {
-         // @ts-ignore
-        pusherPayload.reactions = pusherPayload.reactions.map((r) => ({
-            ...r,
-            user: {
-                id: r.user.id,
-                name: r.user.name,
-                email: r.user.email,
-                image: r.user.image,
-            }
-        }));
-      }
-
-      if (pusherPayload.image && pusherPayload.image.length > 5000) {
-          pusherPayload.image = "IMAGE_PLACEHOLDER"; 
-      }
-
-      await pusherServer.trigger(
-        updatedMessage.conversationId,
-        "message:update",
-        pusherPayload 
-      );
-    }
-
+    console.log(`[REACT] Complete in ${Date.now() - startTime}ms`);
     return NextResponse.json(reaction || { status: "deleted" });
   } catch (error) {
-    console.log(error);
+    console.error("[REACT] Error:", error);
     return new NextResponse("Internal Error", { status: 500 });
   }
 }

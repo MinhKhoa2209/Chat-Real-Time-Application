@@ -1,12 +1,12 @@
 import Avatar from "@/app/components/Avatar";
 import LoadingModal from "@/app/components/LoadingModal";
-import { User } from "@prisma/client";
+import { PartialUser } from "@/app/types";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 interface UserBoxProps {
-  data: User;
+  data: PartialUser;
 }
 const UserBox: React.FC<UserBoxProps> = ({ data }) => {
   const router = useRouter();

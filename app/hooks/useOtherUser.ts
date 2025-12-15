@@ -19,7 +19,9 @@ const useOtherUser = (
     const otherUsers = users.filter(
       (user) => user?.email !== currentUserEmail
     );
-    return otherUsers[0] || {} as User;
+    
+    // Return first other user, or a placeholder object with name
+    return otherUsers[0] || { name: "User", email: "", id: "" } as User;
   }, [session?.data?.user?.email, conversation?.users]);
   
   return otherUser;

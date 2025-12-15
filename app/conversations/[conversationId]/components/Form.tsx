@@ -75,11 +75,18 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
         replyToId: replyToSend?.id 
       });
 
-      // Only call Gemini if mentioned in message
-      if (isBot && mentionsGemini(messageToSend)) {
+      // Call Gemini AI if this is a bot conversation
+      // No need to mention @gemini when chatting directly with AI
+      if (isBot) {
+        // Get current user ID from session
+        const sessionRes = await fetch('/api/auth/session');
+        const sessionData = await sessionRes.json();
+        const userId = sessionData?.user?.id;
+        
         axios.post('/api/gemini', {
           message: messageToSend, 
-          conversationId: conversationId
+          conversationId: conversationId,
+          userId: userId
         });
       }
     } catch (error: any) {

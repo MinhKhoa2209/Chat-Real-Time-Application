@@ -140,16 +140,22 @@ export async function DELETE(
         pusherPayload
       );
 
-      // Get conversation users
+      // Get conversation with full user data
       const conversation = await prisma.conversation.findUnique({
         where: { id: updatedMessage.conversationId },
-        include: { users: true },
+        include: { 
+          users: { select: { id: true, name: true, email: true, image: true } },
+        },
       });
 
-      // Trigger minimal conversation update
+      // Trigger conversation update with full data
       if (conversation) {
         const conversationUpdate = {
           id: conversation.id,
+          name: conversation.name,
+          isGroup: conversation.isGroup,
+          image: conversation.image,
+          users: conversation.users,
           lastMessageAt: conversation.lastMessageAt,
           messages: [{
             id: updatedMessage.id,

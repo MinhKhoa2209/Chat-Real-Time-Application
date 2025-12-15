@@ -87,7 +87,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     height="50"
                     className="h-12 w-12 rounded-full object-cover"
                     src={
-                      image || currentUser?.image || "/images/placeholder.jpg"
+                      image || currentUser?.image || "/images/placeholder.webp"
                     }
                     alt="Avatar"
                   />

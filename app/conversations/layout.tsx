@@ -8,12 +8,16 @@ export default async function ConversationsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const conversations = await getConversations();
-  const users = await getUsers();
+  // Fetch in parallel for better performance
+  const [conversations, users] = await Promise.all([
+    getConversations(),
+    getUsers(),
+  ]);
+  
   return (
     <Sidebar>
       <div className="h-full">
-        <ConversationList users={users} initialItems={conversations} />
+        <ConversationList users={users as any} initialItems={conversations as any} />
         {children}
       </div>
     </Sidebar>

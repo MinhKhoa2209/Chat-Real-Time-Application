@@ -20,7 +20,7 @@ import useActiveList from "@/app/hooks/useActiveList";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { pusherClient } from "@/app/libs/pusher";
+import { getPusherClient } from "@/app/libs/pusher";
 import { useSession } from "next-auth/react";
 
 interface ProfileDrawerProps {
@@ -64,47 +64,26 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     const email = session.data?.user?.email;
     if (!email) return;
 
-    console.log("ProfileDrawer: Setting up listener for channel:", email);
-    
-    // Subscribe to channel (will reuse existing if already subscribed)
+    const pusherClient = getPusherClient();
     const channel = pusherClient.subscribe(email);
 
     const updateHandler = async (updatedConversation: any) => {
-      console.log("ProfileDrawer: Received update event");
-      console.log("ProfileDrawer: Full data keys:", Object.keys(updatedConversation || {}));
-      console.log("ProfileDrawer: Comparing IDs:", updatedConversation?.id, "vs", data.id);
-      
       if (updatedConversation && updatedConversation.id === data.id) {
-        console.log("ProfileDrawer: MATCH! Users array length:", updatedConversation.users?.length);
-        
-        // If imageUpdated flag is set, refetch to get the new image
         if (updatedConversation.imageUpdated) {
-          console.log("ProfileDrawer: Image was updated, refetching...");
           try {
             const response = await axios.get(`/api/conversations/${data.id}`);
-            const freshData = response.data;
-            setData((current) => ({
-              ...current,
-              ...freshData,
-            }));
+            setData((current) => ({ ...current, ...response.data }));
             return;
-          } catch (error) {
-            console.error("Failed to refetch conversation:", error);
-          }
+          } catch {}
         }
         
-        setData((current) => {
-          const newData = {
-            ...current,
-            ...updatedConversation,
-            users: updatedConversation.users || current.users,
-            name: updatedConversation.name ?? current.name,
-            image: updatedConversation.image ?? current.image,
-          };
-          console.log("ProfileDrawer: New data users count:", newData.users?.length);
-          return newData;
-        });
-        // Also update groupName if name changed
+        setData((current) => ({
+          ...current,
+          ...updatedConversation,
+          users: updatedConversation.users || current.users,
+          name: updatedConversation.name ?? current.name,
+          image: updatedConversation.image ?? current.image,
+        }));
         if (updatedConversation.name) {
           setGroupName(updatedConversation.name);
         }
@@ -112,10 +91,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
     };
 
     channel.bind("conversation:update", updateHandler);
-
-    return () => {
-      channel.unbind("conversation:update", updateHandler);
-    };
+    return () => { channel.unbind("conversation:update", updateHandler); };
   }, [data.id, session.data?.user?.email]);
 
   const isGeminiBot = useMemo(() => {

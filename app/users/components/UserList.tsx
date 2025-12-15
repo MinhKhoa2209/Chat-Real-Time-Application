@@ -1,10 +1,10 @@
 "use client";
 
-import { User } from "@prisma/client";
+import { PartialUser } from "@/app/types";
 import UserBox from "./UserBox";
 
 interface UserListProps {
-  items: User[];
+  items: PartialUser[];
 }
 
 const UserList: React.FC<UserListProps> = ({ items }) => {

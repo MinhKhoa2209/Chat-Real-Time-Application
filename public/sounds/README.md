@@ -1,18 +1,20 @@
-# Sound Files for Call Feature
+# Sound Files
 
-Add the following sound files to this directory:
+This directory contains audio files for the call feature.
 
-1. `ringtone.mp3` - Played when receiving an incoming call
-2. `calling.mp3` - Played when making an outgoing call
+## Required Files
 
-## Free Sound Resources
+- `ringtone.mp3` - Played when receiving an incoming call
+- `calling.mp3` - Played when making an outgoing call
 
-You can download free sound effects from:
-- https://freesound.org/
-- https://mixkit.co/free-sound-effects/
-- https://www.zapsplat.com/
+## Fallback
 
-## Recommended Sounds
+If these files are not present, the app will use Web Audio API to generate simple tones as a fallback.
 
-- Ringtone: Search for "phone ring" or "notification"
-- Calling: Search for "dial tone" or "calling beep"
+## Recommended Specifications
+
+- Format: MP3 or OGG
+- Duration: 2-5 seconds (will loop)
+- Sample Rate: 44100 Hz
+- Bitrate: 128 kbps
+- Volume: Normalized to -3dB

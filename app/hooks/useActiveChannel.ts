@@ -1,42 +1,55 @@
 import { Channel, Members } from "pusher-js";
 import useActiveList from "./useActiveList";
-import { useEffect, useState } from "react";
-import { pusherClient } from "../libs/pusher";
+import { useEffect, useRef, useCallback } from "react";
+import { getPusherClient } from "../libs/pusher";
 
 const useActiveChannel = () => {
   const { set, add, remove } = useActiveList();
-  const [activeChannel, setActiveChannel] = useState<Channel | null>(null);
+  const channelRef = useRef<Channel | null>(null);
+  const isSubscribedRef = useRef(false);
+
+  // Memoized handlers to prevent re-binding
+  const handleSubscriptionSucceeded = useCallback((members: Members) => {
+    const initialMembers: string[] = [];
+    members.each((member: Record<string, unknown>) => initialMembers.push(member.id as string));
+    set(initialMembers);
+  }, [set]);
+
+  const handleMemberAdded = useCallback((member: Record<string, unknown>) => {
+    add(member.id as string);
+  }, [add]);
+
+  const handleMemberRemoved = useCallback((member: Record<string, unknown>) => {
+    remove(member.id as string);
+  }, [remove]);
 
   useEffect(() => {
-    let channel = activeChannel;
+    // Prevent double subscription
+    if (isSubscribedRef.current) return;
 
-    if (!channel) {
-      channel = pusherClient.subscribe("presence-messenger");
-      setActiveChannel(channel);
-    }
+    const pusherClient = getPusherClient();
+    
+    // Subscribe to presence channel
+    const channel = pusherClient.subscribe("presence-messenger");
+    channelRef.current = channel;
+    isSubscribedRef.current = true;
 
-    channel.bind('pusher:subscription_succeeded', (members: Members) => {
-      const initialMembers: string[] = [];
-
-      members.each((member: Record<string, any>) => initialMembers.push(member.id));
-      set(initialMembers);
-    });
-
-    channel.bind("pusher:member_added", (member: Record<string, any>) => {
-      add(member.id);
-    });
-
-    channel.bind("pusher:member_removed", (member: Record<string, any>) => {
-      remove(member.id);
-    });
+    // Bind events
+    channel.bind("pusher:subscription_succeeded", handleSubscriptionSucceeded);
+    channel.bind("pusher:member_added", handleMemberAdded);
+    channel.bind("pusher:member_removed", handleMemberRemoved);
 
     return () => {
-      if (activeChannel) {
-        pusherClient.unsubscribe('presence-messenger');
-        setActiveChannel(null);
+      if (channelRef.current) {
+        channelRef.current.unbind("pusher:subscription_succeeded", handleSubscriptionSucceeded);
+        channelRef.current.unbind("pusher:member_added", handleMemberAdded);
+        channelRef.current.unbind("pusher:member_removed", handleMemberRemoved);
+        getPusherClient().unsubscribe("presence-messenger");
+        channelRef.current = null;
+        isSubscribedRef.current = false;
       }
-    }
-  }, [activeChannel, set, add, remove]);
+    };
+  }, [handleSubscriptionSucceeded, handleMemberAdded, handleMemberRemoved]);
 };
 
 export default useActiveChannel;

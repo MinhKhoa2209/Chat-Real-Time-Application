@@ -1,14 +1,22 @@
 "use client";
+
 import { User } from "@prisma/client";
 import Image from "next/image";
+import { memo, useMemo } from "react";
 
 interface AvatarGroupProps {
-  users?: User[] | any[];
+  users?: User[] | { id: string; image?: string | null }[];
   groupImage?: string | null;
 }
 
+const positionMap = {
+  0: "top-0 left-[12px]",
+  1: "bottom-0",
+  2: "bottom-0 right-0",
+} as const;
+
 const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [], groupImage }) => {
-  // If group has custom image, show it instead of user avatars
+  // If group has custom image, show it
   if (groupImage) {
     return (
       <div className="relative h-11 w-11">
@@ -16,18 +24,22 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [], groupImage }) => 
           <Image
             alt="Group Avatar"
             fill
+            sizes="44px"
             src={groupImage}
             className="object-cover rounded-full"
+            loading="lazy"
           />
         </div>
       </div>
     );
   }
 
-  // Filter out invalid users and ensure they have required fields
-  const validUsers = (users || []).filter(user => user && user.id);
-  const slicedUsers = validUsers.slice(0, 3);
-  
+  // Memoize sliced users
+  const slicedUsers = useMemo(() => {
+    const validUsers = (users || []).filter((user) => user && user.id);
+    return validUsers.slice(0, 3);
+  }, [users]);
+
   // If no valid users, show placeholder
   if (slicedUsers.length === 0) {
     return (
@@ -39,17 +51,11 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [], groupImage }) => 
     );
   }
 
-  const positionMap = {
-    0: "top-0 left-[12px]",
-    1: "bottom-0",
-    2: "bottom-0 right-0",
-  };
-
   return (
     <div className="relative h-11 w-11">
       {slicedUsers.map((user, index) => (
         <div
-          key={user.id || index}
+          key={user.id}
           className={`absolute inline-block rounded-full overflow-hidden h-[21px] w-[21px] ${
             positionMap[index as keyof typeof positionMap]
           }`}
@@ -57,8 +63,10 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [], groupImage }) => 
           <Image
             alt="Avatar"
             fill
-            src={user?.image || "/images/placeholder.jpg"}
+            sizes="21px"
+            src={user?.image || "/images/placeholder.webp"}
             className="object-cover rounded-full"
+            loading="lazy"
           />
         </div>
       ))}
@@ -66,4 +74,4 @@ const AvatarGroup: React.FC<AvatarGroupProps> = ({ users = [], groupImage }) => 
   );
 };
 
-export default AvatarGroup;
+export default memo(AvatarGroup);
