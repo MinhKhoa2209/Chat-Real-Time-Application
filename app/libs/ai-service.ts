@@ -462,37 +462,50 @@ Total Conversations: ${conversationStats.totalConversations}
       const userPrompt = this.extractImagePrompt(userMessage);
       console.log('[AIService] Image prompt:', userPrompt);
 
-      // Enhance prompt with Gemini first
+      // Translate Vietnamese to English if needed, but keep the exact meaning
       const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
       
-      let enhancedPrompt = userPrompt;
+      let finalPrompt = userPrompt;
       try {
         const promptChat = ai.chats.create({
           model: MODEL_NAME,
           config: {
-            systemInstruction: `You are an expert at creating prompts for AI image generation.
-            Convert user requests into detailed English prompts. Include style, lighting, composition.
-            Only return the prompt, no explanation. Keep under 50 words.
-            Make it vivid and descriptive for best image quality.`,
+            systemInstruction: `You are a translator for image generation prompts.
+            Your ONLY job is to translate the user's request to English accurately.
+            
+            RULES:
+            - If already in English, return as-is
+            - Translate Vietnamese to English EXACTLY - do not add or change anything
+            - Keep the EXACT subject/object the user requested
+            - Do NOT add artistic styles, lighting, or composition unless user specified
+            - Do NOT interpret or expand the request
+            - Return ONLY the translated prompt, nothing else
+            - Maximum 100 words
+            
+            Example: "con chó" -> "a dog"
+            Example: "mèo đang ngủ" -> "a sleeping cat"
+            Example: "cảnh hoàng hôn trên biển" -> "sunset over the sea"`,
           },
         });
 
         const promptResult = await promptChat.sendMessage({ 
-          message: `Create image prompt for: "${userPrompt}"` 
+          message: `Translate to English (keep exact meaning): "${userPrompt}"` 
         });
         
-        enhancedPrompt = promptResult.text || userPrompt;
-        // Keep prompt short to avoid URL issues
-        if (enhancedPrompt.length > 200) {
-          enhancedPrompt = enhancedPrompt.substring(0, 200);
+        finalPrompt = promptResult.text?.trim() || userPrompt;
+        // Remove quotes if Gemini added them
+        finalPrompt = finalPrompt.replace(/^["']|["']$/g, '');
+        
+        if (finalPrompt.length > 150) {
+          finalPrompt = finalPrompt.substring(0, 150);
         }
-        console.log('[AIService] Enhanced prompt:', enhancedPrompt);
+        console.log('[AIService] Translated prompt:', finalPrompt);
       } catch (err) {
         console.log('[AIService] Using original prompt');
       }
 
-      // Encode prompt for URL - use simpler encoding
-      const cleanPrompt = enhancedPrompt
+      // Encode prompt for URL
+      const cleanPrompt = finalPrompt
         .replace(/[^\w\s,.-]/g, '') // Remove special chars
         .replace(/\s+/g, '%20'); // Replace spaces
       
