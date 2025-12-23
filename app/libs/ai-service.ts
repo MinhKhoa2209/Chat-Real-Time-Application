@@ -94,6 +94,7 @@ Total Conversations: ${conversationStats.totalConversations}
 
   async generateResponse(userId: string, userMessage: string) {
     if (!process.env.GOOGLE_API_KEY) {
+      console.error('[AIService] Missing GOOGLE_API_KEY');
       throw new Error("Missing Google API Key");
     }
 
@@ -275,21 +276,33 @@ Total Conversations: ${conversationStats.totalConversations}
     const lowerMessage = message.toLowerCase();
     const normalizedMessage = this.normalizeVietnamese(message);
 
-    // Handle personalization queries - who user chats with most
-    // Support both Vietnamese with and without diacritics
-    const personalizationKeywords = [
-      'chat nhieu nhat', 'tro chuyen nhieu nhat', 'nhan tin nhieu nhat',
-      'ai nhieu nhat', 'most chatted', 'than thiet', 'ca nhan hoa',
-      'personalization', 'thoi quen chat', 'thoi quen nhan tin',
-      'chat habits', 'nguoi toi chat', 'nguoi ban chat'
+    // Handle "who do I chat with most" - simple answer
+    const mostChattedKeywords = [
+      'chat nhieu nhat', 'nhan tin nhieu nhat', 'ai nhieu nhat', 
+      'most chatted', 'nguoi toi chat', 'nguoi ban chat'
     ];
     
-    if (personalizationKeywords.some(kw => normalizedMessage.includes(kw))) {
+    if (mostChattedKeywords.some(kw => normalizedMessage.includes(kw))) {
+      const personalization = await AIDatabase.getPersonalizationData(userId);
+      if (personalization?.mostChattedWith) {
+        const p = personalization.mostChattedWith;
+        return [`🏆 Người bạn chat nhiều nhất: ${p.name} với ${p.totalMessages} tin nhắn (Gửi: ${p.sentByUser} | Nhận: ${p.receivedByUser})`];
+      }
+      return ['Chưa có đủ dữ liệu để phân tích. Hãy chat thêm nhé!'];
+    }
+
+    // Handle full personalization/habits analysis - detailed response
+    const fullAnalysisKeywords = [
+      'ca nhan hoa', 'personalization', 'thoi quen chat', 'thoi quen nhan tin',
+      'chat habits', 'phan tich', 'than thiet'
+    ];
+    
+    if (fullAnalysisKeywords.some(kw => normalizedMessage.includes(kw))) {
       const personalization = await AIDatabase.getPersonalizationData(userId);
       if (personalization) {
         return this.formatPersonalizationResponse(personalization);
       }
-      return ['Chua co du du lieu de phan tich. Hay chat them nhe!'];
+      return ['Chưa có đủ dữ liệu để phân tích. Hãy chat thêm nhé!'];
     }
 
     // Handle conversation summary queries
@@ -613,7 +626,8 @@ Total Conversations: ${conversationStats.totalConversations}
         return [`Chưa có đủ dữ liệu để phân tích. Hãy chat thêm nhé! 💬`];
       }
 
-      const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
+      const insightApiKey = process.env.GOOGLE_API_KEY;
+      const ai = new GoogleGenAI({ apiKey: insightApiKey! });
       
       const insightChat = ai.chats.create({
         model: MODEL_NAME,
