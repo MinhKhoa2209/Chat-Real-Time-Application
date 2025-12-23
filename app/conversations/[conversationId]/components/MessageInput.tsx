@@ -14,6 +14,7 @@ interface MessageInputProps {
   onValueChange?: (value: string) => void;
   conversationUsers?: any[];
   currentUserEmail?: string;
+  inputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -24,6 +25,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onValueChange,
   conversationUsers = [],
   currentUserEmail,
+  inputRef: externalInputRef,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -31,11 +33,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [mentionSearch, setMentionSearch] = useState("");
   const [mentionStartPos, setMentionStartPos] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const internalInputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = externalInputRef || internalInputRef;
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
 
   const { onChange, ref, name, onBlur } = register(id, { required });
+
+  // Auto-focus input when component mounts or key changes
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (inputRef.current) {

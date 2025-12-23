@@ -11,7 +11,7 @@ import MessageInput from "./MessageInput";
 import { CldUploadButton, type CloudinaryUploadWidgetResults } from "next-cloudinary";
 import { useConversationContext } from "../ConversationContext"; 
 import { XMarkIcon } from "@heroicons/react/24/solid";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import StickerModal from "./StickerModal";
 import GifModal from "./GifModal";
 
@@ -29,6 +29,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
   const [isStickerModalOpen, setIsStickerModalOpen] = useState(false);
   const [isGifModalOpen, setIsGifModalOpen] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   
   // Get current user email
   useEffect(() => {
@@ -89,6 +90,11 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
           userId: userId
         });
       }
+
+      // Re-focus input after sending (like Messenger)
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
     } catch (error: any) {
       console.error("Message submission error:", error);
       // Restore message on error
@@ -338,6 +344,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
             onValueChange={setMessageValue}
             conversationUsers={conversationUsers}
             currentUserEmail={currentUserEmail}
+            inputRef={inputRef}
           />
           
           {/* Send Button or Like */}
