@@ -107,8 +107,15 @@ export async function POST(request: Request) {
     try {
       // Reduce payload size for Pusher (max 10KB)
       const pusherPayload = {
-        ...newMessage,
-        // Remove sensitive/large data
+        id: newMessage.id,
+        body: newMessage.body,
+        image: newMessage.image,
+        fileUrl: newMessage.fileUrl,
+        fileName: newMessage.fileName,
+        fileSize: newMessage.fileSize,
+        createdAt: newMessage.createdAt,
+        conversationId: newMessage.conversationId,
+        senderId: newMessage.senderId,
         sender: {
           id: newMessage.sender.id,
           name: newMessage.sender.name,
@@ -117,23 +124,12 @@ export async function POST(request: Request) {
         },
         seen: newMessage.seen.map(u => ({
           id: u.id,
-          name: u.name,
           email: u.email,
-          image: u.image,
         })),
-        reactions: newMessage.reactions.map(r => ({
-          ...r,
-          user: {
-            id: r.user.id,
-            name: r.user.name,
-            email: r.user.email,
-            image: r.user.image,
-          }
-        })),
+        seenIds: newMessage.seen.map(u => u.id),
         replyTo: newMessage.replyTo ? {
           id: newMessage.replyTo.id,
-          body: newMessage.replyTo.body,
-          image: newMessage.replyTo.image,
+          body: newMessage.replyTo.body?.substring(0, 100),
           sender: {
             id: newMessage.replyTo.sender.id,
             name: newMessage.replyTo.sender.name,
@@ -141,63 +137,47 @@ export async function POST(request: Request) {
         } : null,
         forwardedFrom: newMessage.forwardedFrom ? {
           id: newMessage.forwardedFrom.id,
-          name: newMessage.forwardedFrom.name,
         } : null,
       };
 
-      // Trigger Pusher events in parallel
-      const pusherPromises = [
-        pusherServer.trigger(conversationId, "messages:new", pusherPayload),
-      ];
+      // Trigger message to conversation channel
+      await pusherServer.trigger(conversationId, "messages:new", pusherPayload);
 
-      // For conversation list, send last message with full conversation data
+      // Minimal conversation update payload for sidebar
       const conversationUpdate = {
         id: conversationId,
-        name: updatedConversation.name,
-        isGroup: updatedConversation.isGroup,
-        image: updatedConversation.image,
-        users: updatedConversation.users,
         lastMessageAt: updatedConversation.lastMessageAt,
+        isGroup: updatedConversation.isGroup,
         messages: [{
           id: newMessage.id,
-          body: newMessage.body,
-          image: newMessage.image,
-          fileUrl: newMessage.fileUrl,
+          body: newMessage.body?.substring(0, 100), // Truncate for preview
+          image: newMessage.image ? true : null, // Just flag, not full URL
+          fileUrl: newMessage.fileUrl ? true : null,
           fileName: newMessage.fileName,
-          fileSize: newMessage.fileSize,
           createdAt: newMessage.createdAt,
           senderId: newMessage.senderId,
-          isDeleted: false,
           sender: {
             id: newMessage.sender.id,
             name: newMessage.sender.name,
             email: newMessage.sender.email,
-            image: newMessage.sender.image,
           },
           seen: newMessage.seen.map(u => ({
             id: u.id,
-            name: u.name,
             email: u.email,
-            image: u.image,
           })),
-          reactions: [],
-          replyTo: pusherPayload.replyTo,
-          forwardedFrom: pusherPayload.forwardedFrom,
+          seenIds: newMessage.seen.map(u => u.id),
         }],
       };
 
-      // Add conversation updates for all users
-      for (const user of updatedConversation.users) {
-        if (user.email) {
-          // Send conversation update to all users
-          pusherPromises.push(
-            pusherServer.trigger(user.email, "conversation:update", conversationUpdate)
-          );
-        }
-      }
+      // Send conversation updates to all users in parallel
+      const updatePromises = updatedConversation.users
+        .filter(user => user.email)
+        .map(user => 
+          pusherServer.trigger(user.email!, "conversation:update", conversationUpdate)
+            .catch(err => console.error(`Pusher error for ${user.email}:`, err.message))
+        );
 
-      // Execute all Pusher triggers in parallel
-      await Promise.all(pusherPromises);
+      await Promise.all(updatePromises);
     } catch (pusherError) {
       console.error("Pusher error on new message:", pusherError);
       // Continue even if pusher fails

@@ -96,15 +96,30 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
   }, [lastMessage?.createdAt]);
   const lastMessageText = useMemo(() => {
     if (!lastMessage) {
+      // Different text for groups vs 1-1 chats
+      if (data.isGroup) {
+        return "New group created";
+      }
       return "Start a conversation";
     }
 
+    // Check if message was unsent/deleted first
+    if (lastMessage?.isDeleted) {
+      return lastMessage.body || "Message has been unsent";
+    }
+
+    // Check for image - can be URL string or boolean flag
     if (lastMessage?.image) {
       return "Sent an image";
     }
 
+    // Check for file - can be URL string or boolean flag
     if (lastMessage?.fileUrl) {
-      const fileName = (lastMessage as any).fileName;
+      const fileName = (lastMessage as any).fileName || "";
+      // Check if it's a voice message
+      if (fileName.includes("🎤") || fileName.toLowerCase().includes("voice")) {
+        return "Sent a voice message";
+      }
       return fileName ? `Sent a file: ${fileName}` : "Sent a file";
     }
 
@@ -131,8 +146,12 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
       return lastMessage.body;
     }
 
+    // For groups without body (e.g., system messages)
+    if (data.isGroup) {
+      return "New group created";
+    }
     return "Start a conversation";
-  }, [lastMessage, userEmail, session.data?.user?.name]);
+  }, [lastMessage, userEmail, session.data?.user?.name, data.isGroup]);
 
   // Check if last message is unread (simplified for real-time updates)
   const hasUnread = useMemo(() => {
@@ -141,12 +160,19 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
     // Own messages are always "read"
     if (lastMessage.sender?.email === userEmail) return false;
     
-    // Check if user has seen the last message
+    // Check seenIds first (more reliable)
+    const seenIds = (lastMessage as any).seenIds || [];
+    const userId = session.data?.user?.id;
+    if (userId && seenIds.includes(userId)) {
+      return false;
+    }
+    
+    // Fallback to seen array
     const seenArray = lastMessage.seen || [];
     const hasSeenByUser = seenArray.some((user: any) => user.email === userEmail);
     
     return !hasSeenByUser;
-  }, [lastMessage, userEmail]);
+  }, [lastMessage, userEmail, session.data?.user?.id]);
 
   return (
     <div

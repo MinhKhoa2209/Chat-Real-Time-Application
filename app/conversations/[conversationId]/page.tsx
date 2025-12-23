@@ -29,9 +29,14 @@ const ConversationId = async ({ params }: { params: IParams }) => {
     );
   }
 
-  const isBot = conversation.users.some(
+  // Check if Gemini AI is in this conversation
+  const hasGeminiBot = conversation.users.some(
     (user) => user.email === 'gemini@messenger.com'
   );
+  
+  // isBot = true only for direct 1-1 chat with Gemini (not group)
+  // In groups, Gemini only responds when tagged @Gemini AI
+  const isDirectBotChat = hasGeminiBot && !conversation.isGroup;
 
   return (
     <div className="lg:pl-80 h-full">
@@ -39,7 +44,10 @@ const ConversationId = async ({ params }: { params: IParams }) => {
         <ConversationProvider>
             <Header conversation={conversation} />
             <Body initialMessages={messages} />
-            <Form isBot={isBot} conversationUsers={conversation.users} />
+            <Form 
+              isBot={isDirectBotChat} 
+              conversationUsers={conversation.users} 
+            />
         </ConversationProvider>
       </div>
     </div>

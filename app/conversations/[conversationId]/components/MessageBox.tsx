@@ -6,8 +6,9 @@ import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import Avatar from "@/app/components/Avatar";
 import Image from "next/image";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import axios from "axios";
+import { HiPlay, HiPause } from "react-icons/hi2";
 import {
   FloatingPortal,
   useFloating,
@@ -21,7 +22,6 @@ import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { HiOutlineArrowDownTray, HiFaceSmile } from "react-icons/hi2";
 import ImageModal from "./ImageModal";
 import ForwardModal from "./ForwardModal";
-import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 interface MessageBoxProps {
@@ -36,7 +36,6 @@ const MessageBox: React.FC<MessageBoxProps> = ({
   setReplyTo,
 }) => {
   const session = useSession();
-  const router = useRouter();
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(data.body || "");
@@ -85,8 +84,18 @@ const MessageBox: React.FC<MessageBoxProps> = ({
   const isVideoFile = useMemo(() => {
     if (!data.fileUrl) return false;
     const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv'];
+    // Exclude voice messages
+    if (data.fileName?.includes('🎤') || data.fileName?.toLowerCase().includes('voice')) {
+      return false;
+    }
     return videoExtensions.some(ext => data.fileUrl?.toLowerCase().includes(ext));
-  }, [data.fileUrl]);
+  }, [data.fileUrl, data.fileName]);
+  
+  // Check if file is a voice message
+  const isVoiceMessage = useMemo(() => {
+    if (!data.fileUrl) return false;
+    return data.fileName?.includes('🎤') || data.fileName?.toLowerCase().includes('voice');
+  }, [data.fileUrl, data.fileName]);
 
   const container = clsx("flex gap-2 p-4", isOwn && "justify-end");
   const avatar = clsx(isOwn && "order-2");
@@ -174,7 +183,7 @@ const MessageBox: React.FC<MessageBoxProps> = ({
           </button>
         </div>
       </div>
-    ), { duration: 10000 });
+    ), { duration: 3000 });
   };
 
   const handleReply = () => {
@@ -240,7 +249,7 @@ const MessageBox: React.FC<MessageBoxProps> = ({
           </button>
         </div>
       </div>
-    ), { duration: 10000 });
+    ), { duration: 3000 });
   };
 
   // Get personalized system message text
@@ -360,6 +369,21 @@ const MessageBox: React.FC<MessageBoxProps> = ({
                   onClick={() => setImageModalOpen(true)}
                   className="max-w-[288px] max-h-[288px] object-cover cursor-pointer hover:scale-110 transition rounded-md"
                 />
+              ) : data.image.includes('pollinations.ai') ? (
+                // Use regular img for Pollinations AI images to avoid timeout issues
+                <img
+                  alt="AI Generated Image"
+                  src={data.image}
+                  onClick={() => setImageModalOpen(true)}
+                  className="max-w-[288px] max-h-[288px] object-cover cursor-pointer hover:scale-110 transition rounded-md"
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = '/images/placeholder.webp';
+                    target.alt = 'Image failed to load';
+                  }}
+                />
               ) : (
                 <Image
                   alt="Image"
@@ -371,7 +395,10 @@ const MessageBox: React.FC<MessageBoxProps> = ({
                 />
               )
             ) : isFileMessage ? (
-              isVideoFile ? (
+              isVoiceMessage ? (
+                // Voice message player - Messenger style
+                <VoiceMessagePlayer fileUrl={data.fileUrl} isOwn={isOwn} />
+              ) : isVideoFile ? (
                 <video
                   controls
                   className="max-w-[288px] max-h-[288px] rounded-md"
@@ -492,6 +519,138 @@ const MessageBox: React.FC<MessageBoxProps> = ({
       </div>
     </div>
     </>
+  );
+};
+
+/* ------------------------------------------------------
+   VoiceMessagePlayer: Messenger-style voice message player
+------------------------------------------------------- */
+
+// Fixed waveform pattern to avoid hydration mismatch
+const WAVEFORM_PATTERN = [65, 45, 80, 55, 90, 50, 75, 60, 85, 40, 70, 55, 95, 45, 80, 50, 65, 75, 55, 85];
+
+const VoiceMessagePlayer = ({ fileUrl, isOwn }: { fileUrl: string | null; isOwn: boolean }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  // Load duration using a separate Audio object
+  useEffect(() => {
+    if (!fileUrl) return;
+    
+    const audio = new Audio();
+    audio.preload = "metadata";
+    
+    const handleDurationChange = () => {
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+      }
+    };
+    
+    audio.addEventListener("loadedmetadata", handleDurationChange);
+    audio.addEventListener("durationchange", handleDurationChange);
+    
+    // For some browsers/formats, we need to seek to get duration
+    audio.addEventListener("loadeddata", () => {
+      if (!isFinite(audio.duration) || audio.duration === 0) {
+        // Try seeking to end to force duration calculation
+        audio.currentTime = 1e101;
+      }
+    });
+    
+    audio.addEventListener("timeupdate", () => {
+      if (isFinite(audio.duration) && audio.duration > 0) {
+        setDuration(audio.duration);
+        audio.currentTime = 0;
+      }
+    });
+    
+    audio.src = fileUrl;
+    audio.load();
+    
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleDurationChange);
+      audio.removeEventListener("durationchange", handleDurationChange);
+      audio.src = "";
+    };
+  }, [fileUrl]);
+
+  const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || isNaN(seconds) || seconds <= 0) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+      // Update duration if available during playback
+      if (isFinite(audioRef.current.duration) && audioRef.current.duration > 0) {
+        setDuration(audioRef.current.duration);
+      }
+    }
+  };
+
+  const handleEnded = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="flex items-center gap-3 min-w-[180px]">
+      <audio
+        ref={audioRef}
+        src={fileUrl || undefined}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
+      />
+      
+      <button
+        onClick={togglePlay}
+        className={clsx(
+          "w-10 h-10 rounded-full flex items-center justify-center transition shrink-0",
+          isOwn ? "bg-white/20 hover:bg-white/30" : "bg-sky-100 hover:bg-sky-200 text-sky-600"
+        )}
+      >
+        {isPlaying ? <HiPause size={20} /> : <HiPlay size={20} />}
+      </button>
+
+      <div className="flex-1 flex flex-col gap-1">
+        {/* Waveform visualization */}
+        <div className="flex items-center gap-0.5 h-6">
+          {WAVEFORM_PATTERN.map((height, i) => (
+            <div
+              key={i}
+              className={clsx(
+                "w-1 rounded-full transition-all",
+                i < (progress / 100) * 20
+                  ? isOwn ? "bg-white" : "bg-sky-500"
+                  : isOwn ? "bg-white/40" : "bg-gray-300"
+              )}
+              style={{ height: `${height}%` }}
+            />
+          ))}
+        </div>
+        
+        <span className={clsx("text-xs", isOwn ? "text-white/80" : "text-gray-500")}>
+          {formatTime(isPlaying ? currentTime : duration)}
+        </span>
+      </div>
+    </div>
   );
 };
 

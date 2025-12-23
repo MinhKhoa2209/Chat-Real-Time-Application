@@ -3,7 +3,7 @@
 import useConversation from "@/app/hooks/useConversation";
 import axios from "axios";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
-import { HiPaperAirplane, HiMicrophone, HiPhoto } from "react-icons/hi2";
+import { HiPaperAirplane, HiMicrophone, HiPhoto, HiStop, HiTrash, HiPlay, HiPause } from "react-icons/hi2";
 import { BsStickiesFill } from "react-icons/bs";
 import { MdGif } from "react-icons/md";
 import { BiSolidLike } from "react-icons/bi";
@@ -14,6 +14,7 @@ import { XMarkIcon } from "@heroicons/react/24/solid";
 import { useState, useEffect, useRef } from "react";
 import StickerModal from "./StickerModal";
 import GifModal from "./GifModal";
+import toast from "react-hot-toast";
 
 interface FormProps {
   isBot?: boolean;
@@ -25,11 +26,20 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
   const { replyTo, setReplyTo } = useConversationContext();
   const [messageValue, setMessageValue] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [inputKey, setInputKey] = useState(0);
   const [isStickerModalOpen, setIsStickerModalOpen] = useState(false);
   const [isGifModalOpen, setIsGifModalOpen] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Voice recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   
   // Get current user email
   useEffect(() => {
@@ -39,9 +49,48 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
       .catch(() => {});
   }, []);
   
-  // Check if message mentions Gemini
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
+  
+  // Timer effect for recording
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingTime(prev => {
+          if (prev >= 60) {
+            // Auto stop
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+              mediaRecorderRef.current.stop();
+            }
+            setIsRecording(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    }
+    // Don't reset recordingTime when stopping - keep it for preview
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRecording]);
+  
+  // Check if message mentions @Gemini AI (exact match required for groups)
   const mentionsGemini = (text: string) => {
-    return text.toLowerCase().includes('@gemini') || text.toLowerCase().includes('@gemini ai');
+    const geminiPattern = /@gemini\s*ai/i;
+    return geminiPattern.test(text);
   };
 
   const {
@@ -76,19 +125,39 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
         replyToId: replyToSend?.id 
       });
 
-      // Call Gemini AI if this is a bot conversation
-      // No need to mention @gemini when chatting directly with AI
-      if (isBot) {
-        // Get current user ID from session
-        const sessionRes = await fetch('/api/auth/session');
-        const sessionData = await sessionRes.json();
-        const userId = sessionData?.user?.id;
-        
-        axios.post('/api/gemini', {
-          message: messageToSend, 
-          conversationId: conversationId,
-          userId: userId
-        });
+      // Call Gemini AI:
+      // - In direct bot conversation: always respond
+      // - In group: only respond when @gemini is mentioned
+      const shouldCallGemini = isBot || mentionsGemini(messageToSend);
+      
+      if (shouldCallGemini) {
+        try {
+          // Get current user ID from session
+          const sessionRes = await fetch('/api/auth/session');
+          const sessionData = await sessionRes.json();
+          const userId = sessionData?.user?.id;
+          
+          // Remove @gemini mention from message before sending to AI
+          const cleanMessage = messageToSend
+            .replace(/@gemini\s*ai/gi, '')
+            .replace(/@gemini/gi, '')
+            .trim();
+          
+          const geminiResponse = await axios.post('/api/gemini', {
+            message: cleanMessage || messageToSend, 
+            conversationId: conversationId,
+            userId: userId
+          });
+          
+          console.log('Gemini response:', geminiResponse.data);
+        } catch (geminiError: any) {
+          console.error('Gemini API error:', geminiError);
+          // Create error message in chat
+          await axios.post("/api/messages", {
+            message: "⚠️ Sorry, I'm experiencing some issues right now. Please try again later!",
+            conversationId: conversationId,
+          }).catch(err => console.error('Failed to send error message:', err));
+        }
       }
 
       // Re-focus input after sending (like Messenger)
@@ -105,9 +174,148 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
     }
   };
 
-  const handleVoiceRecord = () => {
-    setIsRecording(!isRecording);
-    console.log("Voice recording:", !isRecording);
+  const handleVoiceRecord = async () => {
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      // Start recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          } 
+        });
+        
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+        });
+        
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+        setRecordingTime(0); // Reset timer when starting new recording
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+        
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(track => track.stop());
+          
+          if (audioChunksRef.current.length === 0) {
+            toast.error("No recording data");
+            return;
+          }
+          
+          const blob = new Blob(audioChunksRef.current, { 
+            type: mediaRecorder.mimeType 
+          });
+          
+          const url = URL.createObjectURL(blob);
+          setAudioBlob(blob);
+          setAudioUrl(url);
+        };
+        
+        mediaRecorder.start(100);
+        setIsRecording(true);
+        
+      } catch (err: any) {
+        console.error("Microphone error:", err);
+        if (err.name === "NotAllowedError") {
+          toast.error("Please allow microphone access");
+        } else if (err.name === "NotFoundError") {
+          toast.error("Microphone not found");
+        } else {
+          toast.error("Cannot record: " + err.message);
+        }
+      }
+    }
+  };
+  
+  const cancelVoiceRecording = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingTime(0);
+    setIsPlaying(false);
+  };
+  
+  const togglePlayPreview = () => {
+    if (!audioPlayerRef.current || !audioUrl) return;
+    
+    if (isPlaying) {
+      audioPlayerRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioPlayerRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+  
+  const sendVoiceMessage = async () => {
+    if (!audioBlob) return;
+    const blobToSend = audioBlob;
+    cancelVoiceRecording(); // Hide preview immediately
+    await uploadVoiceMessage(blobToSend);
+  };
+  
+  const uploadVoiceMessage = async (blob: Blob) => {
+    try {
+      toast.loading("Sending...", { id: "voice-upload" });
+      
+      const formData = new FormData();
+      const fileName = `voice_${Date.now()}.webm`;
+      formData.append("file", blob, fileName);
+      formData.append("upload_preset", "nxq0q7mq");
+      formData.append("resource_type", "video");
+      
+      const cloudinaryRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/video/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      
+      if (!cloudinaryRes.ok) {
+        throw new Error("Upload failed");
+      }
+      
+      const cloudinaryData = await cloudinaryRes.json();
+      
+      if (cloudinaryData.secure_url) {
+        await axios.post("/api/messages", {
+          fileUrl: cloudinaryData.secure_url,
+          fileName: `🎤 Voice message`,
+          fileSize: blob.size,
+          conversationId,
+          replyToId: replyTo?.id,
+        });
+        
+        toast.success("Sent", { id: "voice-upload" });
+        setReplyTo(null);
+      } else {
+        throw new Error("No URL returned");
+      }
+    } catch (error) {
+      console.error("Voice upload error:", error);
+      toast.error("Failed to send", { id: "voice-upload" });
+    }
+  };
+  
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const resolveSecureUrl = (info?: { secure_url?: string; resource_type?: string; format?: string }) => {
@@ -162,6 +370,47 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
 
       <div className="py-4 px-4 bg-white border-t flex flex-col gap-2 lg:gap-4 w-full z-10">
         
+        {/* Hidden audio player for preview */}
+        <audio 
+          ref={audioPlayerRef} 
+          src={audioUrl || undefined}
+          onEnded={() => setIsPlaying(false)}
+          className="hidden"
+        />
+        
+        {/* Voice Recording Preview */}
+        {audioBlob && audioUrl && (
+          <div className="flex items-center gap-3 bg-sky-50 p-3 rounded-xl border border-sky-200">
+            <button
+              onClick={togglePlayPreview}
+              className="p-2 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition"
+            >
+              {isPlaying ? <HiPause size={18} /> : <HiPlay size={18} />}
+            </button>
+            
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-700">🎤 Tin nhắn thoại</div>
+              <div className="text-xs text-gray-500">{formatRecordingTime(recordingTime)}</div>
+            </div>
+            
+            <button
+              onClick={cancelVoiceRecording}
+              className="p-2 text-red-500 hover:bg-red-100 rounded-full transition"
+              title="Xóa"
+            >
+              <HiTrash size={20} />
+            </button>
+            
+            <button
+              onClick={sendVoiceMessage}
+              className="p-2 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition"
+              title="Gửi"
+            >
+              <HiPaperAirplane size={18} />
+            </button>
+          </div>
+        )}
+        
         {replyTo && (
         <div className="flex items-center justify-between bg-gray-100 p-2 rounded-lg border-l-4 border-sky-500 text-sm text-gray-600 animate-fade-in-up">
            <div className="flex flex-col overflow-hidden mr-2">
@@ -194,10 +443,20 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
             className={`p-2 transition rounded-full hover:bg-gray-100 ${
               isRecording ? "text-red-500 animate-pulse" : "text-sky-500 hover:text-sky-600"
             }`}
-            title="Voice Record"
+            title={isRecording ? "Dừng ghi âm" : "Ghi âm"}
           >
-            <HiMicrophone size={22} />
+            {isRecording ? <HiStop size={22} /> : <HiMicrophone size={22} />}
           </button>
+          
+          {/* Recording indicator */}
+          {isRecording && (
+            <div className="flex items-center gap-2 px-2 py-1 bg-red-100 rounded-full">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-xs text-red-600 font-medium">
+                {formatRecordingTime(recordingTime)}
+              </span>
+            </div>
+          )}
 
           {/* Image/Video/File Upload */}
           <CldUploadButton

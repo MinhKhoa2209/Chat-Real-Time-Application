@@ -115,20 +115,6 @@ model Reaction {
   message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 }
 
-model AiMemory {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-}
-
-model AiKnowledge {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  topic     String
-  content   String
-  createdAt DateTime @default(now())
-}
-
 model Call {
   id             String    @id @default(auto()) @map("_id") @db.ObjectId
   type           String    // "voice" | "video"

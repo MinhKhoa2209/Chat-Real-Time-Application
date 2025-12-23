@@ -17,8 +17,45 @@ interface ConversationListProps {
   users: any[];
 }
 
-// Memoized ConversationBox
-const MemoizedConversationBox = memo(ConversationBox);
+// ConversationBox with proper comparison
+const MemoizedConversationBox = memo(ConversationBox, (prevProps, nextProps) => {
+  // Re-render if selected state changes
+  if (prevProps.selected !== nextProps.selected) return false;
+  
+  // Re-render if conversation id changes
+  if (prevProps.data.id !== nextProps.data.id) return false;
+  
+  // Re-render if lastMessageAt changes
+  const prevTime = prevProps.data.lastMessageAt ? new Date(prevProps.data.lastMessageAt).getTime() : 0;
+  const nextTime = nextProps.data.lastMessageAt ? new Date(nextProps.data.lastMessageAt).getTime() : 0;
+  if (prevTime !== nextTime) return false;
+  
+  // Re-render if messages array length changes
+  const prevMsgLen = prevProps.data.messages?.length || 0;
+  const nextMsgLen = nextProps.data.messages?.length || 0;
+  if (prevMsgLen !== nextMsgLen) return false;
+  
+  // Re-render if last message id changes
+  const prevLastMsgId = prevProps.data.messages?.[prevMsgLen - 1]?.id;
+  const nextLastMsgId = nextProps.data.messages?.[nextMsgLen - 1]?.id;
+  if (prevLastMsgId !== nextLastMsgId) return false;
+  
+  // Re-render if last message body changes (for unsend)
+  const prevLastMsgBody = prevProps.data.messages?.[prevMsgLen - 1]?.body;
+  const nextLastMsgBody = nextProps.data.messages?.[nextMsgLen - 1]?.body;
+  if (prevLastMsgBody !== nextLastMsgBody) return false;
+  
+  // Re-render if last message isDeleted changes
+  const prevLastMsgDeleted = prevProps.data.messages?.[prevMsgLen - 1]?.isDeleted;
+  const nextLastMsgDeleted = nextProps.data.messages?.[nextMsgLen - 1]?.isDeleted;
+  if (prevLastMsgDeleted !== nextLastMsgDeleted) return false;
+  
+  // Re-render if name or image changes
+  if (prevProps.data.name !== nextProps.data.name) return false;
+  if (prevProps.data.image !== nextProps.data.image) return false;
+  
+  return true; // Don't re-render
+});
 
 const ConversationList: React.FC<ConversationListProps> = ({
   initialItems,
@@ -43,7 +80,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
     const pusherClient = getPusherClient();
     const channel = pusherClient.subscribe(pusherKey);
 
+    console.log('[ConversationList] Subscribed to channel:', pusherKey);
+
     const newHandler = (conversation: FullConversationType) => {
+      console.log('[ConversationList] New conversation received:', conversation.id);
       setItems((current) => {
         const existing = find(current, { id: conversation.id });
         if (existing) {
@@ -57,47 +97,47 @@ const ConversationList: React.FC<ConversationListProps> = ({
       });
     };
 
-    const updateHandler = async (conversation: FullConversationType & { imageUpdated?: boolean }) => {
-      // Fetch fresh data if image updated
-      if (conversation.imageUpdated && conversation.id) {
-        try {
-          const response = await fetch(`/api/conversations/${conversation.id}`);
-          if (response.ok) {
-            const freshData = await response.json();
-            conversation = { ...conversation, image: freshData.image };
-          }
-        } catch {}
-      }
-
+    const updateHandler = (conversation: FullConversationType & { imageUpdated?: boolean }) => {
+      console.log('[ConversationList] Update received:', conversation.id, 'isGroup:', conversation.isGroup);
+      console.log('[ConversationList] New messages:', conversation.messages?.length, conversation.messages?.[0]?.body?.substring(0, 30));
+      
       setItems((current) => {
-        const updated = current.map((currentConversation) => {
-          if (currentConversation.id !== conversation.id) return currentConversation;
+        // Find existing conversation
+        const existingIndex = current.findIndex(c => c.id === conversation.id);
+        console.log('[ConversationList] Existing index:', existingIndex);
+        
+        if (existingIndex === -1) {
+          // New conversation - add to top if it has users
+          if (!conversation.users || conversation.users.length === 0) {
+            return current;
+          }
+          return [conversation, ...current];
+        }
 
-          const currentMessages = currentConversation.messages || [];
-          const newMessages = conversation.messages || [];
+        // Update existing conversation
+        const existingConversation = current[existingIndex];
+        const currentMessages = existingConversation.messages || [];
+        const newMessages = conversation.messages || [];
 
-          const baseUpdate = {
-            ...currentConversation,
-            name: conversation.name ?? currentConversation.name,
-            image: conversation.image ?? currentConversation.image,
-            // Only update users if new array has items, otherwise keep current
-            users: conversation.users && conversation.users.length > 0 
-              ? conversation.users 
-              : currentConversation.users,
-            isGroup: conversation.isGroup ?? currentConversation.isGroup,
-            lastMessageAt: conversation.lastMessageAt || currentConversation.lastMessageAt,
-          };
-
-          if (newMessages.length === 0) return baseUpdate;
-
-          // Merge messages efficiently
+        // Merge messages - add new messages to existing ones
+        let mergedMessages = [...currentMessages];
+        
+        if (newMessages.length > 0) {
           const existingMessageIds = new Set(currentMessages.map((m) => m.id));
+          
+          // Add new messages that don't exist
           const messagesToAdd = newMessages.filter((m) => !existingMessageIds.has(m.id));
-          const updatedMessages = currentMessages.map((existingMsg) => {
+          if (messagesToAdd.length > 0) {
+            console.log('[ConversationList] Adding', messagesToAdd.length, 'new messages');
+            mergedMessages = [...mergedMessages, ...messagesToAdd];
+          }
+          
+          // Update existing messages (for seen status, isDeleted, body changes, etc.)
+          mergedMessages = mergedMessages.map((existingMsg) => {
             const updatedMsg = newMessages.find((m) => m.id === existingMsg.id);
             if (!updatedMsg) return existingMsg;
             
-            // Merge seen arrays properly - combine existing and new seen users
+            // Merge seen arrays properly
             const existingSeen = existingMsg.seen || [];
             const newSeen = updatedMsg.seen || [];
             const seenMap = new Map();
@@ -109,32 +149,49 @@ const ConversationList: React.FC<ConversationListProps> = ({
             return {
               ...existingMsg,
               ...updatedMsg,
+              body: updatedMsg.body ?? existingMsg.body,
+              isDeleted: updatedMsg.isDeleted ?? existingMsg.isDeleted,
               replyTo: updatedMsg.replyTo || existingMsg.replyTo,
               reactions: updatedMsg.reactions || existingMsg.reactions || [],
               seen: mergedSeen,
               seenIds: updatedMsg.seenIds || existingMsg.seenIds || [],
             };
           });
-
-          return { ...baseUpdate, messages: [...updatedMessages, ...messagesToAdd] };
-        });
-
-        // Check if conversation was updated or needs to be added
-        const wasUpdated = updated.some((c) => c.id === conversation.id);
-        if (!wasUpdated) {
-          // If conversation doesn't have users, it's a partial update - don't add it
-          if (!conversation.users || conversation.users.length === 0) {
-            return updated;
-          }
-          return [conversation, ...updated];
+          
+          // Sort messages by createdAt to ensure correct order
+          mergedMessages.sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return aTime - bTime;
+          });
         }
 
-        // Sort by last message time
-        return updated.sort((a, b) => {
-          const aLast = a.messages?.[a.messages.length - 1];
-          const bLast = b.messages?.[b.messages.length - 1];
-          const aTime = aLast?.createdAt ? new Date(aLast.createdAt).getTime() : 0;
-          const bTime = bLast?.createdAt ? new Date(bLast.createdAt).getTime() : 0;
+        // Parse lastMessageAt to ensure it's a valid Date
+        const newLastMessageAt = conversation.lastMessageAt 
+          ? new Date(conversation.lastMessageAt)
+          : existingConversation.lastMessageAt;
+
+        const updatedConversation = {
+          ...existingConversation,
+          name: conversation.name ?? existingConversation.name,
+          image: conversation.image ?? existingConversation.image,
+          users: conversation.users && conversation.users.length > 0 
+            ? conversation.users 
+            : existingConversation.users,
+          isGroup: conversation.isGroup ?? existingConversation.isGroup,
+          lastMessageAt: newLastMessageAt,
+          messages: mergedMessages,
+        };
+
+        console.log('[ConversationList] Updated conversation, messages count:', mergedMessages.length);
+
+        // Create new array with updated conversation at the top (most recent)
+        const newItems = current.filter(c => c.id !== conversation.id);
+        
+        // Sort by lastMessageAt (most recent first)
+        return [updatedConversation, ...newItems].sort((a, b) => {
+          const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+          const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
           return bTime - aTime;
         });
       });
@@ -184,7 +241,13 @@ const ConversationList: React.FC<ConversationListProps> = ({
       // Own messages are always "read"
       if (lastMessage.sender?.email === userEmail) return total;
       
-      // Check if user has seen the last message
+      // Check seenIds first (more reliable)
+      const seenIds = (lastMessage as any).seenIds || [];
+      if (userId && seenIds.includes(userId)) {
+        return total;
+      }
+      
+      // Fallback to seen array
       const seenArray = lastMessage.seen || [];
       const hasSeenByUser = seenArray.some((user: any) => user.email === userEmail);
       
@@ -238,13 +301,19 @@ const ConversationList: React.FC<ConversationListProps> = ({
               <p className="text-xs mt-1">Click the + button to start chatting</p>
             </div>
           ) : (
-            items.map((item) => (
-              <MemoizedConversationBox
-                key={item.id}
-                data={item}
-                selected={conversationId === item.id}
-              />
-            ))
+            items.map((item) => {
+              // Create a unique key that changes when messages update
+              const lastMsg = item.messages?.[item.messages.length - 1];
+              const uniqueKey = `${item.id}-${lastMsg?.id || 'no-msg'}-${item.lastMessageAt}`;
+              
+              return (
+                <MemoizedConversationBox
+                  key={uniqueKey}
+                  data={item}
+                  selected={conversationId === item.id}
+                />
+              );
+            })
           )}
         </div>
       </aside>

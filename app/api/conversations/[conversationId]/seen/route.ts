@@ -19,8 +19,8 @@ export async function POST(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Get only the last message that user hasn't seen
-    const lastMessage = await prisma.message.findFirst({
+    // Get ALL messages that user hasn't seen (not just the last one)
+    const unseenMessages = await prisma.message.findMany({
       where: {
         conversationId,
         NOT: {
@@ -31,23 +31,28 @@ export async function POST(
       select: { id: true },
     });
 
-    if (!lastMessage) {
+    if (unseenMessages.length === 0) {
       return NextResponse.json({ success: true });
     }
 
-    // Update only the last message (batch update for efficiency)
-    const updatedMessage = await prisma.message.update({
-      where: { id: lastMessage.id },
-      data: {
-        seenIds: { push: currentUser.id },
-      },
-      select: {
-        id: true,
-        seenIds: true,
-        seen: { select: { id: true, name: true, email: true, image: true } },
-        senderId: true,
-      },
-    });
+    // Update ALL unseen messages
+    const updatePromises = unseenMessages.map(msg =>
+      prisma.message.update({
+        where: { id: msg.id },
+        data: {
+          seenIds: { push: currentUser.id },
+        },
+        select: {
+          id: true,
+          seenIds: true,
+          seen: { select: { id: true, name: true, email: true, image: true } },
+          senderId: true,
+        },
+      })
+    );
+
+    const updatedMessages = await Promise.all(updatePromises);
+    const lastUpdatedMessage = updatedMessages[0]; // Most recent
 
     // Get conversation users for notification
     const conversation = await prisma.conversation.findUnique({
@@ -59,20 +64,20 @@ export async function POST(
 
     // Send update with full seen user data for "Seen by..." display
     const seenUpdate = {
-      id: updatedMessage.id,
-      seenIds: updatedMessage.seenIds,
-      seen: updatedMessage.seen,
+      id: lastUpdatedMessage.id,
+      seenIds: lastUpdatedMessage.seenIds,
+      seen: lastUpdatedMessage.seen,
     };
 
-    // Conversation update for unread count
+    // Conversation update for unread count - include all updated messages
     const conversationUpdate = {
       id: conversationId,
-      messages: [{
-        id: updatedMessage.id,
-        seenIds: updatedMessage.seenIds,
-        seen: updatedMessage.seen,
-        senderId: updatedMessage.senderId,
-      }],
+      messages: updatedMessages.map(msg => ({
+        id: msg.id,
+        seenIds: msg.seenIds,
+        seen: msg.seen,
+        senderId: msg.senderId,
+      })),
     };
 
     // Fire and forget Pusher notifications
@@ -93,7 +98,7 @@ export async function POST(
 
     Promise.all(pusherPromises).catch(() => {});
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, updatedCount: updatedMessages.length });
   } catch (error) {
     console.error("ERROR_SEEING_MESSAGE:", error);
     return new NextResponse("Internal Error", { status: 500 });

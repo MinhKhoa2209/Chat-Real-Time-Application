@@ -10,10 +10,22 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { message, conversationId, userId } = body;
 
-    const aiMessages = await AIService.generateResponse(userId, message);
-    AIService.processAutoMemory(userId, message).catch((err) =>
-      console.error("Auto Memory Error:", err)
-    );
+    console.log('[GEMINI] Request received:', { message: message?.substring(0, 50), conversationId, userId });
+
+    if (!message || !conversationId) {
+      console.error('[GEMINI] Missing required fields');
+      return new NextResponse("Missing required fields", { status: 400 });
+    }
+
+    let aiMessages;
+    try {
+      aiMessages = await AIService.generateResponse(userId, message);
+      console.log('[GEMINI] AI generated', aiMessages.length, 'messages');
+    } catch (aiError: any) {
+      console.error('[GEMINI] AI generation error:', aiError);
+      // Return error message instead of failing completely
+      aiMessages = ["Sorry, I'm experiencing some issues right now. Please try again later!"];
+    }
 
     const AI_BOT_ID = "6926f7de1fca804c3b97f53c"; 
 
@@ -38,8 +50,9 @@ export async function POST(request: Request) {
         await new Promise(resolve => setTimeout(resolve, 800));
       }
 
-      // Check if this is image data
+      // Check if this is image data or image URL
       const isImageData = messageText.startsWith("IMAGE_DATA:");
+      const isImageUrl = messageText.startsWith("IMAGE_URL:");
       
       let messageData: any = {
         conversationId,
@@ -51,6 +64,11 @@ export async function POST(request: Request) {
         // Handle image - save base64 to image field
         const imageBase64 = messageText.replace("IMAGE_DATA:", "");
         messageData.image = imageBase64;
+        messageData.body = null;
+      } else if (isImageUrl) {
+        // Handle image URL from Pollinations.ai
+        const imageUrl = messageText.replace("IMAGE_URL:", "");
+        messageData.image = imageUrl;
         messageData.body = null;
       } else {
         // Regular text message
@@ -70,13 +88,26 @@ export async function POST(request: Request) {
         },
       });
 
+      console.log('[GEMINI] Message created:', newMessage.id);
+
       // Update conversation lastMessageAt
-      await prisma.conversation.update({
+      const updatedConversation = await prisma.conversation.update({
         where: { id: conversationId },
         data: { lastMessageAt: new Date() },
+        select: {
+          lastMessageAt: true,
+        },
       });
 
-      await pusherServer.trigger(conversationId, "messages:new", newMessage);
+      console.log('[GEMINI] Conversation updated:', updatedConversation.lastMessageAt);
+
+      // Trigger Pusher for message
+      try {
+        await pusherServer.trigger(conversationId, "messages:new", newMessage);
+        console.log('[GEMINI] Pusher messages:new triggered');
+      } catch (pusherError) {
+        console.error('[GEMINI] Pusher messages:new error:', pusherError);
+      }
       
       // Send conversation:update to all users for conversation list
       if (conversation?.users) {
@@ -111,15 +142,22 @@ export async function POST(request: Request) {
           }],
         };
 
-        for (const user of conversation.users) {
-          if (user.email) {
-            await pusherServer.trigger(user.email, "conversation:update", conversationUpdate);
-          }
+        try {
+          const pusherPromises = conversation.users
+            .filter(user => user.email)
+            .map(user => pusherServer.trigger(user.email!, "conversation:update", conversationUpdate));
+          
+          await Promise.all(pusherPromises);
+          console.log('[GEMINI] Pusher conversation:update triggered for', conversation.users.length, 'users');
+        } catch (pusherError) {
+          console.error('[GEMINI] Pusher conversation:update error:', pusherError);
         }
       }
       
       createdMessages.push(newMessage);
     }
+
+    console.log('[GEMINI] All messages sent successfully:', createdMessages.length);
 
     return NextResponse.json({ 
       success: true, 
@@ -128,6 +166,7 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("[AI_ERROR]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    console.error("[AI_ERROR] Stack:", error.stack);
+    return new NextResponse(error.message || "Internal Error", { status: 500 });
   }
 }
