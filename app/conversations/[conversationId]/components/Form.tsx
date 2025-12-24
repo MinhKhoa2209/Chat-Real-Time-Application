@@ -30,7 +30,6 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [inputKey, setInputKey] = useState(0);
   const [isStickerModalOpen, setIsStickerModalOpen] = useState(false);
   const [isGifModalOpen, setIsGifModalOpen] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>("");
@@ -115,8 +114,12 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
     // Clear form IMMEDIATELY before sending
     setValue("message", "", { shouldValidate: false });
     setMessageValue("");
-    setInputKey(prev => prev + 1);
     setReplyTo(null);
+    
+    // Clear input value directly
+    if (inputRef.current) {
+      (inputRef.current as any).clearInput?.();
+    }
 
     try {
       await axios.post("/api/messages", {
@@ -594,7 +597,6 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
           className="flex items-center gap-2 flex-1"
         >
           <MessageInput
-            key={inputKey}
             id="message"
             register={register}
             errors={errors}

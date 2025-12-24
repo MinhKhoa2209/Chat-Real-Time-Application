@@ -1,7 +1,7 @@
 "use client";
 
 import { FieldErrors, FieldValues, UseFormRegister } from "react-hook-form";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { HiFaceSmile } from "react-icons/hi2";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 
@@ -37,16 +37,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const inputRef = externalInputRef || internalInputRef;
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
+  const isComposingRef = useRef(false); // Track IME composition
 
   const { onChange, ref, name, onBlur } = register(id, { required });
 
-  // Auto-focus input when component mounts or key changes
+  // Auto-focus input when component mounts
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
+  // Auto-resize textarea
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.style.height = "auto";
@@ -54,6 +57,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
   }, [inputValue]);
 
+  // Handle click outside for emoji picker - use mousedown to prevent focus loss
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -61,6 +65,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
         !emojiPickerRef.current.contains(event.target as Node)
       ) {
         setShowEmojiPicker(false);
+        // Re-focus input after closing emoji picker
+        requestAnimationFrame(() => {
+          inputRef.current?.focus();
+        });
       }
     };
 
@@ -73,7 +81,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     };
   }, [showEmojiPicker]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     const cursorPos = e.target.selectionStart;
     
@@ -99,14 +107,42 @@ const MessageInput: React.FC<MessageInputProps> = ({
     } else {
       setShowMentions(false);
     }
-  };
+  }, [onChange, onValueChange]);
+
+  // Handle IME composition (for Vietnamese, Chinese, Japanese input)
+  const handleCompositionStart = useCallback(() => {
+    isComposingRef.current = true;
+  }, []);
+
+  const handleCompositionEnd = useCallback((e: React.CompositionEvent<HTMLTextAreaElement>) => {
+    isComposingRef.current = false;
+    // Trigger change after composition ends
+    const target = e.target as HTMLTextAreaElement;
+    setInputValue(target.value);
+    onValueChange?.(target.value);
+  }, [onValueChange]);
+
+  // Prevent blur during certain interactions
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
+    // Don't trigger blur if clicking on emoji picker or mention dropdown
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (
+      relatedTarget &&
+      (emojiPickerRef.current?.contains(relatedTarget) ||
+        mentionRef.current?.contains(relatedTarget))
+    ) {
+      e.preventDefault();
+      return;
+    }
+    onBlur(e);
+  }, [onBlur]);
 
   const filteredUsers = conversationUsers.filter(user =>
     user.email !== currentUserEmail && // Exclude current user
     user.name?.toLowerCase().includes(mentionSearch)
   );
 
-  const insertMention = (userName: string) => {
+  const insertMention = useCallback((userName: string) => {
     const beforeMention = inputValue.substring(0, mentionStartPos);
     const afterMention = inputValue.substring(inputRef.current?.selectionStart || inputValue.length);
     const newValue = `${beforeMention}@${userName} ${afterMention}`;
@@ -127,18 +163,20 @@ const MessageInput: React.FC<MessageInputProps> = ({
       
       // Set cursor position after mention
       const cursorPos = beforeMention.length + userName.length + 2;
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         inputRef.current?.setSelectionRange(cursorPos, cursorPos);
         inputRef.current?.focus();
-      }, 0);
+      });
     }
     
     onValueChange?.(newValue);
-  };
+  }, [inputValue, mentionStartPos, onValueChange]);
 
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
+  const handleEmojiClick = useCallback((emojiData: EmojiClickData) => {
     const emoji = emojiData.emoji;
-    const newValue = inputValue + emoji;
+    const cursorPos = inputRef.current?.selectionStart ?? inputValue.length;
+    const newValue = inputValue.slice(0, cursorPos) + emoji + inputValue.slice(cursorPos);
+    
     setInputValue(newValue);
     if (inputRef.current) {
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
@@ -150,13 +188,23 @@ const MessageInput: React.FC<MessageInputProps> = ({
       const changeEvent = new Event("change", { bubbles: true });
       inputRef.current.dispatchEvent(inputEvent);
       inputRef.current.dispatchEvent(changeEvent);
+      
+      // Set cursor after emoji
+      const newCursorPos = cursorPos + emoji.length;
+      requestAnimationFrame(() => {
+        inputRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+        inputRef.current?.focus();
+      });
     }
 
     onValueChange?.(newValue);
     setShowEmojiPicker(false);
-  };
+  }, [inputValue, onValueChange]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Don't handle keys during IME composition
+    if (isComposingRef.current) return;
+    
     if (showMentions && filteredUsers.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -188,7 +236,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
       const form = inputRef.current?.closest("form");
       form?.requestSubmit();
     }
-  };
+  }, [showMentions, filteredUsers, selectedMentionIndex, insertMention]);
+
+  // Clear input value externally (called from Form after submit)
+  const clearInput = useCallback(() => {
+    setInputValue("");
+  }, []);
+
+  // Expose clearInput method
+  useEffect(() => {
+    if (inputRef.current) {
+      (inputRef.current as any).clearInput = clearInput;
+    }
+  }, [clearInput]);
 
   return (
     <div className="relative w-full">
@@ -200,11 +260,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
           }}
           id={id}
           name={name}
-          autoComplete={id}
+          autoComplete="off"
           value={inputValue}
           onChange={handleInputChange}
-          onBlur={onBlur}
+          onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onCompositionStart={handleCompositionStart}
+          onCompositionEnd={handleCompositionEnd}
           placeholder={placeholder}
           rows={1}
           className="text-black font-light py-2 pl-4 pr-12 bg-neutral-100 w-full rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none overflow-y-auto max-h-[120px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
@@ -273,4 +335,4 @@ const MessageInput: React.FC<MessageInputProps> = ({
   );
 };
 
-export default MessageInput;
+export default memo(MessageInput);

@@ -54,6 +54,17 @@ const MemoizedConversationBox = memo(ConversationBox, (prevProps, nextProps) => 
   if (prevProps.data.name !== nextProps.data.name) return false;
   if (prevProps.data.image !== nextProps.data.image) return false;
   
+  // Re-render if any user's image or name changes (for avatar updates)
+  const prevUsers = prevProps.data.users || [];
+  const nextUsers = nextProps.data.users || [];
+  if (prevUsers.length !== nextUsers.length) return false;
+  for (let i = 0; i < prevUsers.length; i++) {
+    const prevUser = prevUsers[i];
+    const nextUser = nextUsers.find((u: any) => u.id === prevUser.id);
+    if (!nextUser) return false;
+    if (prevUser.image !== nextUser.image || prevUser.name !== nextUser.name) return false;
+  }
+  
   return true; // Don't re-render
 });
 
@@ -204,14 +215,31 @@ const ConversationList: React.FC<ConversationListProps> = ({
       }
     };
 
+    // Handler for user profile updates (avatar, name)
+    const userUpdateHandler = (updatedUser: { id: string; name?: string; image?: string; email?: string }) => {
+      console.log('[ConversationList] User update received:', updatedUser.id, updatedUser.name);
+      setItems((current) => 
+        current.map((conversation) => ({
+          ...conversation,
+          users: conversation.users.map((user: any) => 
+            user.id === updatedUser.id 
+              ? { ...user, name: updatedUser.name ?? user.name, image: updatedUser.image ?? user.image }
+              : user
+          ),
+        }))
+      );
+    };
+
     channel.bind("conversation:new", newHandler);
     channel.bind("conversation:update", updateHandler);
     channel.bind("conversation:remove", removeHandler);
+    channel.bind("user:update", userUpdateHandler);
 
     return () => {
       channel.unbind("conversation:new", newHandler);
       channel.unbind("conversation:update", updateHandler);
       channel.unbind("conversation:remove", removeHandler);
+      channel.unbind("user:update", userUpdateHandler);
       // Don't unsubscribe - other components use this channel
     };
   }, [pusherKey, conversationId, router]);
