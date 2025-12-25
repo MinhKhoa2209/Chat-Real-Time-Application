@@ -85,15 +85,18 @@ const AuthForm = () => {
 
   return (
     <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-      <div className="flex justify-center mb-6">
-        <h1
-          className="  text-5xl font-extrabold bg-clip-text text-transparent bg-linear-to-r from-sky-500 to-indigo-500" >
-          KAICHAT
-        </h1>
+      <div className="flex justify-center mb-8">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-xl">K</span>
+          </div>
+          <h1 className="text-4xl font-extrabold gradient-text">
+            KAICHAT
+          </h1>
+        </div>
       </div>
-      {/* End KAICHAT Logo */}
-      <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <div className="glass py-8 px-6 shadow-xl rounded-3xl sm:px-10 text-gray-900 dark:text-white">
+        <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
           {variant === "REGISTER" && (
             <Input
               id="name"
@@ -119,7 +122,7 @@ const AuthForm = () => {
             errors={errors}
             disabled={isLoading}
           />
-          <div>
+          <div className="pt-2">
             <Button fullWidth disabled={isLoading} type="submit">
               {variant === "LOGIN" ? "Sign in" : "Register"}
             </Button>
@@ -128,15 +131,15 @@ const AuthForm = () => {
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
+              <div className="w-full border-t border-gray-200 dark:border-gray-700" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-2 text-gray-500">
+              <span className="bg-white/80 dark:bg-slate-800/80 px-3 text-gray-500 dark:text-gray-400 rounded-full">
                 Or continue with
               </span>
             </div>
           </div>
-          <div className="mt-6 flex gap-2">
+          <div className="mt-6 flex gap-3">
             <AuthSocialButton
               icon={BsGithub}
               onClick={() => socialAction("github")}
@@ -147,13 +150,13 @@ const AuthForm = () => {
             />
           </div>
         </div>
-        <div className="flex gap-2 justify-center text-sm mt-6 px-2 text-gray-500">
+        <div className="flex gap-2 justify-center text-sm mt-6 px-2 text-gray-500 dark:text-gray-400">
           <div>
             {variant === "LOGIN"
               ? "New to KAICHAT?"
               : "Already have an account?"}
           </div>
-          <div onClick={toggleVariant} className="underline cursor-pointer">
+          <div onClick={toggleVariant} className="text-sky-500 font-semibold cursor-pointer hover:text-sky-600 transition">
             {variant === "LOGIN" ? "Create an account" : "Login"}
           </div>
         </div>

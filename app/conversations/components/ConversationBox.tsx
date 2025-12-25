@@ -178,8 +178,8 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
     <div
       onClick={handleClick}
       className={clsx(
-        "w-full relative flex items-center space-x-3 hover:bg-neutral-100 rounded-lg transition cursor-pointer p-3",
-        selected ? "bg-neutral-100" : "bg-white"
+        "conversation-card w-full relative flex items-center space-x-3 p-3 cursor-pointer",
+        selected && "selected"
       )}
     >
       {data.isGroup ? (
@@ -190,27 +190,31 @@ const ConversationBox: React.FC<ConversationBoxProps> = ({
       <div className="min-w-0 flex-1">
         <div className="focus:outline-none">
           <div className="flex justify-between items-center mb-1">
-            <p className="text-md font-medium text-gray-900">
+            <p className={clsx(
+              "text-[15px] font-semibold truncate",
+              hasSeen ? "text-gray-800 dark:text-gray-200" : "text-gray-900 dark:text-white"
+            )}>
               {data.name || otherUser?.name || "Conversation"}
             </p>
             {formattedTime && (
-              <p className="text-xs text-gray-400 font-light">
+              <p className={clsx(
+                "text-xs ml-2 flex-shrink-0",
+                hasSeen ? "text-gray-400" : "text-sky-500 font-medium"
+              )}>
                 {formattedTime}
               </p>
             )}
           </div>
           <div className="flex justify-between items-center">
-            <p
-              className={clsx(
-                `truncate text-s flex-1`,
-                hasSeen ? "text-gray-500" : "text-black font-medium"
-              )}
-            >
+            <p className={clsx(
+              "truncate text-sm flex-1 pr-2",
+              hasSeen ? "text-gray-500 dark:text-gray-400" : "text-gray-800 dark:text-gray-200 font-medium"
+            )}>
               {lastMessageText}
             </p>
             {hasUnread && (
-              <div className="ml-2 flex-shrink-0 bg-sky-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                •
+              <div className="unread-badge ml-2 flex-shrink-0 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="w-2 h-2 bg-white rounded-full"></span>
               </div>
             )}
           </div>

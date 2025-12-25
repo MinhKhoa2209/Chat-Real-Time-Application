@@ -82,7 +82,7 @@ const CallButtons = memo<CallButtonsProps>(({
       <button
         onClick={handleVoiceCall}
         disabled={isDisabled}
-        className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
         title={isGroup ? "Group voice call" : "Voice call"}
         aria-label={isGroup ? "Start group voice call" : "Start voice call"}
       >
@@ -91,7 +91,7 @@ const CallButtons = memo<CallButtonsProps>(({
       <button
         onClick={handleVideoCall}
         disabled={isDisabled}
-        className="p-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+        className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
         title={isGroup ? "Group video call" : "Video call"}
         aria-label={isGroup ? "Start group video call" : "Start video call"}
       >

@@ -269,8 +269,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onCompositionEnd={handleCompositionEnd}
           placeholder={placeholder}
           rows={1}
-          className="text-black font-light py-2 pl-4 pr-12 bg-neutral-100 w-full rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none overflow-y-auto max-h-[120px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
-          style={{ minHeight: "40px" }}
+          className="text-gray-900 dark:text-white font-normal py-3 pl-4 pr-12 bg-gray-100 dark:bg-gray-800 w-full rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none overflow-y-auto max-h-[120px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent transition-all duration-200"
+          style={{ minHeight: "44px" }}
         />
         
         {/* Emoji Picker Button - Inside Input (Right) */}
@@ -278,7 +278,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="p-1 text-gray-400 hover:text-sky-500 transition rounded-full hover:bg-gray-200"
+            className="p-1 text-gray-400 hover:text-sky-500 transition rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
           >
             <HiFaceSmile size={20} />
           </button>
@@ -300,7 +300,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
         {showMentions && filteredUsers.length > 0 && (
           <div 
             ref={mentionRef}
-            className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto z-50"
+            className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 max-h-60 overflow-y-auto z-50"
           >
             {filteredUsers.map((user, index) => (
               <div
@@ -308,8 +308,8 @@ const MessageInput: React.FC<MessageInputProps> = ({
                 onClick={() => insertMention(user.name)}
                 className={`flex items-center gap-3 px-4 py-2 cursor-pointer transition ${
                   index === selectedMentionIndex
-                    ? "bg-sky-100"
-                    : "hover:bg-gray-100"
+                    ? "bg-sky-100 dark:bg-sky-900/30"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
               >
                 {user.image ? (
@@ -319,11 +319,11 @@ const MessageInput: React.FC<MessageInputProps> = ({
                     className="w-8 h-8 rounded-full"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold">
+                  <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-semibold">
                     {user.name?.[0]?.toUpperCase()}
                   </div>
                 )}
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-gray-900 dark:text-white">
                   {user.name}
                 </span>
               </div>

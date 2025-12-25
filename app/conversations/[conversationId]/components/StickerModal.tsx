@@ -55,10 +55,10 @@ const StickerModal: React.FC<StickerModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Choose a Sticker
           </h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Click on a sticker to send it
           </p>
         </div>
@@ -70,7 +70,7 @@ const StickerModal: React.FC<StickerModalProps> = ({
               key={index}
               onClick={() => handleStickerClick(sticker)}
               disabled={isLoading}
-              className="text-4xl hover:scale-125 transition-transform duration-200 p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-4xl hover:scale-125 transition-transform duration-200 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title={sticker}
             >
               {sticker}
@@ -79,11 +79,11 @@ const StickerModal: React.FC<StickerModalProps> = ({
         </div>
 
         {/* Close Button */}
-        <div className="flex justify-end pt-4 border-t">
+        <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition disabled:opacity-50"
           >
             Close
           </button>

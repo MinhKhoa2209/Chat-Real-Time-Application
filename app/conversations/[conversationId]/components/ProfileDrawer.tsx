@@ -219,13 +219,13 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <DialogPanel className="bg-white rounded-lg p-6 max-w-sm w-full shadow-xl">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Leave Group</h3>
-                <p className="text-sm text-gray-500 mb-4">Are you sure you want to leave this group?</p>
+              <DialogPanel className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full shadow-xl">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Leave Group</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Are you sure you want to leave this group?</p>
                 <div className="flex gap-3 justify-end">
                   <button
                     onClick={() => setShowLeaveConfirm(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
                   >
                     Cancel
                   </button>
@@ -275,14 +275,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                   leaveTo="translate-x-full"
                 >
                   <DialogPanel className="pointer-events-auto w-screen max-w-md">
-                    <div className="flex h-full flex-col overflow-y-scroll py-6 bg-white shadow-xl">
+                    <div className="flex h-full flex-col overflow-y-scroll py-6 bg-white dark:bg-gray-900 shadow-xl">
                       <div className="px-4 sm:px-6">
                         <div className="flex items-start justify-end">
                           <div className="ml-3 flex h-7 items-center">
                             <button
                               onClick={onClose}
                               type="button"
-                              className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                              className="rounded-md bg-white dark:bg-gray-900 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
                             >
                               <span className="sr-only">Close panel</span>
                               <IoClose size={24} />
@@ -320,7 +320,7 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                 type="text"
                                 value={groupName}
                                 onChange={(e) => setGroupName(e.target.value)}
-                                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                className="px-3 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                                 autoFocus
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") handleUpdateGroupName();
@@ -340,14 +340,14 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                             </div>
                           ) : (
                             <div 
-                              className={data.isGroup ? "cursor-pointer hover:text-sky-600 transition" : ""}
+                              className={`text-gray-900 dark:text-white font-medium ${data.isGroup ? "cursor-pointer hover:text-sky-600 dark:hover:text-sky-400 transition" : ""}`}
                               onClick={() => data.isGroup && setIsEditingName(true)}
                             >
                               {title}
                             </div>
                           )}
                           
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
                             {statusText}
                           </div>
                           <div className="flex gap-10 my-8">
@@ -357,10 +357,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                   onClick={() => setAddMembersOpen(true)}
                                   className="flex flex-col gap-3 items-center cursor-pointer hover:opacity-75"
                                 >
-                                  <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center">
-                                    <HiUserAdd size={20} />
+                                  <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                                    <HiUserAdd size={20} className="text-gray-600 dark:text-gray-400" />
                                   </div>
-                                  <div className="text-sm font-light text-neutral-600">
+                                  <div className="text-sm font-light text-gray-600 dark:text-gray-400">
                                     Add
                                   </div>
                                 </div>
@@ -368,10 +368,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                                   onClick={() => setShowLeaveConfirm(true)}
                                   className="flex flex-col gap-3 items-center cursor-pointer hover:opacity-75"
                                 >
-                                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                                    <HiLogout size={20} className="text-red-600" />
+                                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                                    <HiLogout size={20} className="text-red-600 dark:text-red-400" />
                                   </div>
-                                  <div className="text-sm font-light text-red-600">
+                                  <div className="text-sm font-light text-red-600 dark:text-red-400">
                                     {isLeaving ? "Leaving..." : "Leave"}
                                   </div>
                                 </div>
@@ -381,10 +381,10 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                               onClick={() => setConfirmOpen(true)}
                               className="flex flex-col gap-3 items-center cursor-pointer hover:opacity-75"
                             >
-                              <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center">
-                                <IoTrash size={20} />
+                              <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
+                                <IoTrash size={20} className="text-gray-600 dark:text-gray-400" />
                               </div>
-                              <div className="text-sm font-light text-neutral-600">
+                              <div className="text-sm font-light text-gray-600 dark:text-gray-400">
                                 Delete
                               </div>
                             </div>
@@ -393,17 +393,17 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                             <dl className="space-y-8 px-4 sm:space-y-6 sm:px-6">
                               {data.isGroup && (
                                 <div>
-                                  <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0 mb-3">
+                                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-40 sm:shrink-0 mb-3">
                                     Members
                                   </dt>
-                                  <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+                                  <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:col-span-2">
                                     <div className="space-y-3">
                                       {data.users.map((user) => (
-                                        <div key={user.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition">
+                                        <div key={user.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition">
                                           <Avatar user={user} />
                                           <div className="flex-1">
-                                            <div className="font-medium">{user.name}</div>
-                                            <div className="text-xs text-gray-500">{user.email}</div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{user.name}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">{user.email}</div>
                                           </div>
                                         </div>
                                       ))}
@@ -413,22 +413,22 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
                               )}
                               {!data.isGroup && otherUser?.email && (
                                 <div>
-                                  <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0">
+                                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-40 sm:shrink-0">
                                     Email
                                   </dt>
-                                  <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+                                  <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:col-span-2">
                                     {otherUser.email}
                                   </dd>
                                 </div>
                               )}
                               {!data.isGroup && !isGeminiBot && joinedDate && (
                                 <>
-                                  <hr />
+                                  <hr className="border-gray-200 dark:border-gray-700" />
                                   <div>
-                                    <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0">
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-40 sm:shrink-0">
                                       Joined
                                     </dt>
-                                    <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+                                    <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:col-span-2">
                                       <time dateTime={joinedDate}>
                                         {joinedDate}
                                       </time>
@@ -439,13 +439,13 @@ const ProfileDrawer: React.FC<ProfileDrawerProps> = ({
 
                               {!data.isGroup && isGeminiBot && (
                                 <>
-                                  <hr />
+                                  <hr className="border-gray-200 dark:border-gray-700" />
                                   <div>
-                                    <dt className="text-sm font-medium text-gray-500 sm:w-40 sm:shrink-0">
+                                    <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 sm:w-40 sm:shrink-0">
                                       Role
                                     </dt>
-                                    <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
-                                      Trợ lý AI Gemini 
+                                    <dd className="mt-1 text-sm text-gray-900 dark:text-white sm:col-span-2">
+                                      Gemini AI Assistant
                                     </dd>
                                   </div>
                                 </>

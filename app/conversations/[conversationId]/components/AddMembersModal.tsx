@@ -83,10 +83,10 @@ const AddMembersModal: React.FC<AddMembersModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Add Members
           </h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Select users to add to this group
           </p>
         </div>
@@ -98,8 +98,8 @@ const AddMembersModal: React.FC<AddMembersModalProps> = ({
               onClick={() => toggleUser(user.id)}
               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition ${
                 selectedUsers.includes(user.id)
-                  ? "bg-sky-100 border-2 border-sky-500"
-                  : "bg-white border-2 border-gray-200 hover:border-gray-300"
+                  ? "bg-sky-100 dark:bg-sky-900/30 border-2 border-sky-500"
+                  : "bg-white dark:bg-slate-700 border-2 border-gray-200 dark:border-slate-600 hover:border-gray-300 dark:hover:border-slate-500"
               }`}
             >
               {user.image ? (
@@ -109,15 +109,15 @@ const AddMembersModal: React.FC<AddMembersModalProps> = ({
                   className="w-10 h-10 rounded-full"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold">
+                <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-slate-600 flex items-center justify-center text-white font-semibold">
                   {user.name?.[0]?.toUpperCase()}
                 </div>
               )}
               <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {user.name}
                 </p>
-                <p className="text-xs text-gray-500">{user.email}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
               </div>
               {selectedUsers.includes(user.id) && (
                 <div className="w-5 h-5 bg-sky-500 rounded-full flex items-center justify-center">
@@ -138,11 +138,11 @@ const AddMembersModal: React.FC<AddMembersModalProps> = ({
           ))}
         </div>
 
-        <div className="flex gap-3 justify-end pt-4 border-t">
+        <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-slate-700">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-lg transition disabled:opacity-50"
           >
             Cancel
           </button>

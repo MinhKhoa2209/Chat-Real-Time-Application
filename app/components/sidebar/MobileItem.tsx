@@ -10,6 +10,7 @@ interface MobileItemProps {
     active?: boolean;
     onClick?: () => Promise<void> | void;
 }
+
 const MobileItem: React.FC<MobileItemProps> = ({href, icon: Icon, active, onClick}) => {
     const handleClick = () => {
         if(onClick) {
@@ -17,12 +18,22 @@ const MobileItem: React.FC<MobileItemProps> = ({href, icon: Icon, active, onClic
         }
     };
     return (
-        <Link href={href} onClick={handleClick} className={clsx(
-            `group flex gap-x-3 text-sm leading-6 font-semibold w-full justify-center p-4 text-gray-500 hover:text-black hover:bg-gray-100`,
-            active && "bg-gray-100 text-black"
-        )}>
-            <Icon className="h-6 w-6"/>
+        <Link 
+            href={href} 
+            onClick={handleClick} 
+            className={clsx(
+                "group flex items-center justify-center p-3 rounded-xl transition-all duration-300",
+                active 
+                    ? "gradient-primary text-white shadow-lg" 
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            )}
+        >
+            <Icon className={clsx(
+                "h-6 w-6 transition-transform duration-300",
+                active && "scale-110"
+            )}/>
         </Link>
     )
 };
+
 export default MobileItem;

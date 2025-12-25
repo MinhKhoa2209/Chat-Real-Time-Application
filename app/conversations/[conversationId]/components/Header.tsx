@@ -13,6 +13,7 @@ import { getPusherClient } from "@/app/libs/pusher";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import CallButtons from "@/app/components/call/CallButtons";
+import clsx from "clsx";
 
 interface HeaderProps {
   conversation: Conversation & {
@@ -101,27 +102,38 @@ const Header: React.FC<HeaderProps> = ({ conversation: initialConversation }) =>
         isOpen={drawerOpen}
         onClose={closeDrawer}
       />
-      <div className="bg-white w-full flex border-b sm:px-4 py-3 px-4 lg:px-6 justify-between items-center shadow-sm">
+      <div className="glass w-full flex border-b border-gray-200 dark:border-gray-800 sm:px-4 py-3 px-4 lg:px-6 justify-between items-center">
         <div className="flex gap-3 items-center">
           <Link
-            className="lg:hidden block text-sky-500 hover:text-sky-600 transition cursor-pointer"
+            className="lg:hidden block text-sky-500 hover:text-sky-600 transition cursor-pointer p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
             href="/conversations"
             prefetch={false}
           >
-            <HiChevronLeft size={32} />
+            <HiChevronLeft size={28} />
           </Link>
-          {conversation.isGroup ? (
-            <AvatarGroup users={conversation.users} groupImage={conversation.image} />
-          ) : (
-            <Avatar user={otherUser} />
-          )}
+          <div className="relative">
+            {conversation.isGroup ? (
+              <AvatarGroup users={conversation.users} groupImage={conversation.image} />
+            ) : (
+              <Avatar user={otherUser} />
+            )}
+          </div>
           <div className="flex flex-col">
-            <div className="font-medium">{displayName}</div>
-            <div className="text-sm font-light text-neutral-500">{statusText}</div>
+            <div className="font-semibold text-gray-900 dark:text-white">{displayName}</div>
+            <div className="flex items-center gap-1.5">
+              {isActive && !conversation.isGroup && (
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              )}
+              <span className={clsx(
+                "text-xs",
+                isActive ? "text-green-600 font-medium" : "text-gray-500"
+              )}>
+                {statusText}
+              </span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Call buttons */}
+        <div className="flex items-center gap-1">
           {conversation.isGroup ? (
             <CallButtons
               users={conversation.users}
@@ -138,12 +150,12 @@ const Header: React.FC<HeaderProps> = ({ conversation: initialConversation }) =>
           ) : null}
           <button
             onClick={openDrawer}
-            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-300"
             aria-label="Open conversation details"
           >
             <HiEllipsisHorizontal
-              size={32}
-              className="text-sky-500 cursor-pointer hover:text-sky-600 transition"
+              size={24}
+              className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-sky-500 transition"
             />
           </button>
         </div>

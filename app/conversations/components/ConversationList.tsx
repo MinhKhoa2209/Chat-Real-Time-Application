@@ -3,6 +3,7 @@
 import useConversation from "@/app/hooks/useConversation";
 import { FullConversationType } from "@/app/types";
 import { MdOutlineGroupAdd } from "react-icons/md";
+import { HiMagnifyingGlass, HiXMark } from "react-icons/hi2";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useCallback, memo } from "react";
@@ -17,44 +18,33 @@ interface ConversationListProps {
   users: any[];
 }
 
-// ConversationBox with proper comparison
 const MemoizedConversationBox = memo(ConversationBox, (prevProps, nextProps) => {
-  // Re-render if selected state changes
   if (prevProps.selected !== nextProps.selected) return false;
-  
-  // Re-render if conversation id changes
   if (prevProps.data.id !== nextProps.data.id) return false;
   
-  // Re-render if lastMessageAt changes
   const prevTime = prevProps.data.lastMessageAt ? new Date(prevProps.data.lastMessageAt).getTime() : 0;
   const nextTime = nextProps.data.lastMessageAt ? new Date(nextProps.data.lastMessageAt).getTime() : 0;
   if (prevTime !== nextTime) return false;
   
-  // Re-render if messages array length changes
   const prevMsgLen = prevProps.data.messages?.length || 0;
   const nextMsgLen = nextProps.data.messages?.length || 0;
   if (prevMsgLen !== nextMsgLen) return false;
   
-  // Re-render if last message id changes
   const prevLastMsgId = prevProps.data.messages?.[prevMsgLen - 1]?.id;
   const nextLastMsgId = nextProps.data.messages?.[nextMsgLen - 1]?.id;
   if (prevLastMsgId !== nextLastMsgId) return false;
   
-  // Re-render if last message body changes (for unsend)
   const prevLastMsgBody = prevProps.data.messages?.[prevMsgLen - 1]?.body;
   const nextLastMsgBody = nextProps.data.messages?.[nextMsgLen - 1]?.body;
   if (prevLastMsgBody !== nextLastMsgBody) return false;
   
-  // Re-render if last message isDeleted changes
   const prevLastMsgDeleted = prevProps.data.messages?.[prevMsgLen - 1]?.isDeleted;
   const nextLastMsgDeleted = nextProps.data.messages?.[nextMsgLen - 1]?.isDeleted;
   if (prevLastMsgDeleted !== nextLastMsgDeleted) return false;
   
-  // Re-render if name or image changes
   if (prevProps.data.name !== nextProps.data.name) return false;
   if (prevProps.data.image !== nextProps.data.image) return false;
   
-  // Re-render if any user's image or name changes (for avatar updates)
   const prevUsers = prevProps.data.users || [];
   const nextUsers = nextProps.data.users || [];
   if (prevUsers.length !== nextUsers.length) return false;
@@ -65,36 +55,47 @@ const MemoizedConversationBox = memo(ConversationBox, (prevProps, nextProps) => 
     if (prevUser.image !== nextUser.image || prevUser.name !== nextUser.name) return false;
   }
   
-  return true; // Don't re-render
+  return true;
 });
 
-const ConversationList: React.FC<ConversationListProps> = ({
-  initialItems,
-  users,
-}) => {
+const ConversationList: React.FC<ConversationListProps> = ({ initialItems, users }) => {
   const { data: sessionData } = useSession();
   const [items, setItems] = useState(initialItems || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const router = useRouter();
   const { conversationId, isOpen } = useConversation();
 
   const pusherKey = useMemo(() => sessionData?.user?.email, [sessionData?.user?.email]);
 
-  // Memoized handlers
   const openModal = useCallback(() => setIsModalOpen(true), []);
   const closeModal = useCallback(() => setIsModalOpen(false), []);
+  const toggleSearch = useCallback(() => {
+    setIsSearchOpen((prev) => !prev);
+    if (isSearchOpen) setSearchTerm("");
+  }, [isSearchOpen]);
+  const clearSearch = useCallback(() => setSearchTerm(""), []);
 
-  // Optimized Pusher subscription
+  const filteredItems = useMemo(() => {
+    if (!searchTerm.trim()) return items;
+    const lowerSearch = searchTerm.toLowerCase().trim();
+    return items.filter((conversation) => {
+      if (conversation.name?.toLowerCase().includes(lowerSearch)) return true;
+      const userNames = conversation.users?.map((user: any) => user.name?.toLowerCase() || "").join(" ");
+      if (userNames?.includes(lowerSearch)) return true;
+      const lastMessage = conversation.messages?.[conversation.messages.length - 1];
+      if (lastMessage?.body?.toLowerCase().includes(lowerSearch)) return true;
+      return false;
+    });
+  }, [items, searchTerm]);
+
   useEffect(() => {
     if (!pusherKey) return;
-
     const pusherClient = getPusherClient();
     const channel = pusherClient.subscribe(pusherKey);
 
-    console.log('[ConversationList] Subscribed to channel:', pusherKey);
-
     const newHandler = (conversation: FullConversationType) => {
-      console.log('[ConversationList] New conversation received:', conversation.id);
       setItems((current) => {
         const existing = find(current, { id: conversation.id });
         if (existing) {
@@ -109,67 +110,42 @@ const ConversationList: React.FC<ConversationListProps> = ({
     };
 
     const updateHandler = (conversation: FullConversationType & { imageUpdated?: boolean }) => {
-      console.log('[ConversationList] Update received:', conversation.id, 'isGroup:', conversation.isGroup);
-      console.log('[ConversationList] New messages:', conversation.messages?.length, conversation.messages?.[0]?.body?.substring(0, 30));
-      
       setItems((current) => {
-        // Find existing conversation
         const existingIndex = current.findIndex(c => c.id === conversation.id);
-        console.log('[ConversationList] Existing index:', existingIndex);
-        
         if (existingIndex === -1) {
-          // New conversation - add to top if it has users
-          if (!conversation.users || conversation.users.length === 0) {
-            return current;
-          }
+          if (!conversation.users || conversation.users.length === 0) return current;
           return [conversation, ...current];
         }
 
-        // Update existing conversation
         const existingConversation = current[existingIndex];
         const currentMessages = existingConversation.messages || [];
         const newMessages = conversation.messages || [];
-
-        // Merge messages - add new messages to existing ones
         let mergedMessages = [...currentMessages];
         
         if (newMessages.length > 0) {
           const existingMessageIds = new Set(currentMessages.map((m) => m.id));
-          
-          // Add new messages that don't exist
           const messagesToAdd = newMessages.filter((m) => !existingMessageIds.has(m.id));
-          if (messagesToAdd.length > 0) {
-            console.log('[ConversationList] Adding', messagesToAdd.length, 'new messages');
-            mergedMessages = [...mergedMessages, ...messagesToAdd];
-          }
+          if (messagesToAdd.length > 0) mergedMessages = [...mergedMessages, ...messagesToAdd];
           
-          // Update existing messages (for seen status, isDeleted, body changes, etc.)
           mergedMessages = mergedMessages.map((existingMsg) => {
             const updatedMsg = newMessages.find((m) => m.id === existingMsg.id);
             if (!updatedMsg) return existingMsg;
-            
-            // Merge seen arrays properly
             const existingSeen = existingMsg.seen || [];
             const newSeen = updatedMsg.seen || [];
             const seenMap = new Map();
             [...existingSeen, ...newSeen].forEach((user: any) => {
               if (user?.id) seenMap.set(user.id, user);
             });
-            const mergedSeen = Array.from(seenMap.values());
-
             return {
-              ...existingMsg,
-              ...updatedMsg,
+              ...existingMsg, ...updatedMsg,
               body: updatedMsg.body ?? existingMsg.body,
               isDeleted: updatedMsg.isDeleted ?? existingMsg.isDeleted,
               replyTo: updatedMsg.replyTo || existingMsg.replyTo,
               reactions: updatedMsg.reactions || existingMsg.reactions || [],
-              seen: mergedSeen,
+              seen: Array.from(seenMap.values()),
               seenIds: updatedMsg.seenIds || existingMsg.seenIds || [],
             };
           });
-          
-          // Sort messages by createdAt to ensure correct order
           mergedMessages.sort((a, b) => {
             const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -177,29 +153,17 @@ const ConversationList: React.FC<ConversationListProps> = ({
           });
         }
 
-        // Parse lastMessageAt to ensure it's a valid Date
-        const newLastMessageAt = conversation.lastMessageAt 
-          ? new Date(conversation.lastMessageAt)
-          : existingConversation.lastMessageAt;
-
         const updatedConversation = {
           ...existingConversation,
           name: conversation.name ?? existingConversation.name,
           image: conversation.image ?? existingConversation.image,
-          users: conversation.users && conversation.users.length > 0 
-            ? conversation.users 
-            : existingConversation.users,
+          users: conversation.users?.length > 0 ? conversation.users : existingConversation.users,
           isGroup: conversation.isGroup ?? existingConversation.isGroup,
-          lastMessageAt: newLastMessageAt,
+          lastMessageAt: conversation.lastMessageAt ? new Date(conversation.lastMessageAt) : existingConversation.lastMessageAt,
           messages: mergedMessages,
         };
 
-        console.log('[ConversationList] Updated conversation, messages count:', mergedMessages.length);
-
-        // Create new array with updated conversation at the top (most recent)
         const newItems = current.filter(c => c.id !== conversation.id);
-        
-        // Sort by lastMessageAt (most recent first)
         return [updatedConversation, ...newItems].sort((a, b) => {
           const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
           const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
@@ -210,14 +174,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
     const removeHandler = (conversation: FullConversationType) => {
       setItems((current) => current.filter((convo) => convo.id !== conversation.id));
-      if (conversationId === conversation.id) {
-        router.push("/conversations");
-      }
+      if (conversationId === conversation.id) router.push("/conversations");
     };
 
-    // Handler for user profile updates (avatar, name)
-    const userUpdateHandler = (updatedUser: { id: string; name?: string; image?: string; email?: string }) => {
-      console.log('[ConversationList] User update received:', updatedUser.id, updatedUser.name);
+    const userUpdateHandler = (updatedUser: { id: string; name?: string; image?: string }) => {
       setItems((current) => 
         current.map((conversation) => ({
           ...conversation,
@@ -240,11 +200,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
       channel.unbind("conversation:update", updateHandler);
       channel.unbind("conversation:remove", removeHandler);
       channel.unbind("user:update", userUpdateHandler);
-      // Don't unsubscribe - other components use this channel
     };
   }, [pusherKey, conversationId, router]);
 
-  // Count conversations with unread messages (based on last message)
   const totalUnreadCount = useMemo(() => {
     const userEmail = sessionData?.user?.email;
     const userId = (sessionData?.user as any)?.id;
@@ -252,97 +210,125 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
     return items.reduce((total, conversation) => {
       const messages = conversation.messages || [];
-      
-      // Find last message not hidden for current user
       let lastMessage = null;
       for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i] as any;
-        const hiddenForIds = msg.hiddenForIds || [];
-        if (!hiddenForIds.includes(userId)) {
-          lastMessage = msg;
-          break;
-        }
+        if (!(msg.hiddenForIds || []).includes(userId)) { lastMessage = msg; break; }
       }
-      
-      if (!lastMessage) return total;
-      
-      // Own messages are always "read"
-      if (lastMessage.sender?.email === userEmail) return total;
-      
-      // Check seenIds first (more reliable)
+      if (!lastMessage || lastMessage.sender?.email === userEmail) return total;
       const seenIds = (lastMessage as any).seenIds || [];
-      if (userId && seenIds.includes(userId)) {
-        return total;
-      }
-      
-      // Fallback to seen array
-      const seenArray = lastMessage.seen || [];
-      const hasSeenByUser = seenArray.some((user: any) => user.email === userEmail);
-      
+      if (userId && seenIds.includes(userId)) return total;
+      const hasSeenByUser = (lastMessage.seen || []).some((user: any) => user.email === userEmail);
       return hasSeenByUser ? total : total + 1;
     }, 0);
   }, [items, sessionData?.user]);
 
+
   return (
     <>
       <GroupChatModal users={users} isOpen={isModalOpen} onClose={closeModal} />
-      <aside
-        className={clsx(
-          "fixed inset-y-0 pb-20 lg:pb-0 lg:left-20 lg:w-80 lg:block overflow-y-auto border-r border-gray-200",
-          isOpen ? "hidden" : "block w-full left-0"
-        )}
-      >
-        <div className="px-5">
-          <div className="flex justify-between mb-4 pt-4 items-center">
-            <div className="flex items-center gap-2">
-              <div className="text-2xl font-bold text-neutral-800">Messages</div>
-              {totalUnreadCount > 0 && (
-                <div className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-[20px] px-1.5 flex items-center justify-center">
-                  {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+      <aside className={clsx(
+        "fixed inset-y-0 pb-20 lg:pb-0 lg:left-20 lg:w-80 lg:block overflow-y-auto border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900",
+        isOpen ? "hidden" : "block w-full left-0"
+      )}>
+        <div className="px-4">
+          {/* Header */}
+          <div className="sticky top-0 z-10 pt-6 pb-4 bg-white dark:bg-gray-900">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold gradient-text">Messages</h1>
+                {totalUnreadCount > 0 && (
+                  <div className="unread-badge text-white text-xs font-bold rounded-full h-6 min-w-6 px-2 flex items-center justify-center">
+                    {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleSearch}
+                  className={clsx(
+                    "rounded-xl p-2.5 cursor-pointer transition-all duration-300",
+                    isSearchOpen 
+                      ? "gradient-primary text-white shadow-lg" 
+                      : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm border border-gray-100 dark:border-gray-700"
+                  )}
+                  aria-label="Search conversations"
+                >
+                  <HiMagnifyingGlass size={20} />
+                </button>
+                <button
+                  onClick={openModal}
+                  className="fab rounded-xl p-2.5 text-white cursor-pointer"
+                  aria-label="Create group chat"
+                >
+                  <MdOutlineGroupAdd size={20} />
+                </button>
+              </div>
+            </div>
+            
+            {/* Search Input */}
+            <div className={clsx(
+              "overflow-hidden transition-all duration-300 ease-out",
+              isSearchOpen ? "max-h-16 opacity-100 mb-2" : "max-h-0 opacity-0"
+            )}>
+              <div className="search-modern relative">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <HiMagnifyingGlass className="h-5 w-5 text-gray-400" />
                 </div>
-              )}
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search conversations..."
+                  className="w-full pl-12 pr-12 py-3 bg-transparent border-0 text-sm focus:outline-none placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-white"
+                  autoFocus={isSearchOpen}
+                />
+                {searchTerm && (
+                  <button onClick={clearSearch} className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors">
+                    <HiXMark className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
             </div>
-            <button
-              onClick={openModal}
-              className="rounded-full p-2 bg-gray-100 text-gray-600 cursor-pointer hover:opacity-75 transition-opacity"
-              aria-label="Create group chat"
-            >
-              <MdOutlineGroupAdd size={20} />
-            </button>
           </div>
-          {items.length === 0 ? (
-            <div className="text-center text-gray-400 py-12 px-4">
-              <svg
-                className="w-16 h-16 mx-auto mb-4 opacity-50"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <p className="text-sm font-medium">No conversations yet</p>
-              <p className="text-xs mt-1">Click the + button to start chatting</p>
-            </div>
-          ) : (
-            items.map((item) => {
-              // Create a unique key that changes when messages update
-              const lastMsg = item.messages?.[item.messages.length - 1];
-              const uniqueKey = `${item.id}-${lastMsg?.id || 'no-msg'}-${item.lastMessageAt}`;
-              
-              return (
-                <MemoizedConversationBox
-                  key={uniqueKey}
-                  data={item}
-                  selected={conversationId === item.id}
-                />
-              );
-            })
-          )}
+
+          {/* Conversation List */}
+          <div className="space-y-2 pb-4">
+            {filteredItems.length === 0 ? (
+              <div className="text-center py-16 px-4 animate-fade-in">
+                {searchTerm ? (
+                  <>
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      <HiMagnifyingGlass className="w-10 h-10 text-gray-300 dark:text-gray-600" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No results found</p>
+                    <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">Try a different search term</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-2xl gradient-primary opacity-20 flex items-center justify-center">
+                      <svg className="w-10 h-10 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No conversations yet</p>
+                    <p className="text-xs mt-1 text-gray-400 dark:text-gray-500">Click the + button to start chatting</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              filteredItems.map((item) => {
+                const lastMsg = item.messages?.[item.messages.length - 1];
+                return (
+                  <MemoizedConversationBox
+                    key={`${item.id}-${lastMsg?.id || 'no-msg'}-${item.lastMessageAt}`}
+                    data={item}
+                    selected={conversationId === item.id}
+                  />
+                );
+              })
+            )}
+          </div>
         </div>
       </aside>
     </>

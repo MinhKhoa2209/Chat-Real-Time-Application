@@ -56,15 +56,15 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-12">
-          <div className="border-b border-gray-900/10 pb-12">
-            <h2 className="text-base font-semibold leading-7 text-gray-900">
+        <div className="space-y-8">
+          <div className="border-b border-gray-200 dark:border-gray-700 pb-8">
+            <h2 className="text-lg font-semibold leading-7 text-gray-900 dark:text-white">
               Create a group chat
             </h2>
-            <p className="mt-1 text-sm loading-6 text-gray-600">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Create a chat with more than 2 people.
             </p>
-            <div className="mt-10 flex flex-col gap-y-8">
+            <div className="mt-8 flex flex-col gap-y-6">
               <Input
                 register={register}
                 label="Name"
@@ -90,7 +90,7 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({
             </div>
           </div>
         </div>
-        <div className="mt-6 flex items-center justify-end gap-x-6">
+        <div className="mt-6 flex items-center justify-end gap-x-4">
           <Button
             disabled={isLoading}
             onClick={onClose}

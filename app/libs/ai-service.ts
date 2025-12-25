@@ -216,7 +216,7 @@ Total Conversations: ${conversationStats.totalConversations}
 
     // Message 3: Top contacts
     if (p.topContacts && p.topContacts.length > 1) {
-      let msg3 = '�n TOP LIEN HE\n\n';
+      let msg3 = ' TOP LIEN HE\n\n';
       p.topContacts.slice(0, 5).forEach((contact: any, i: number) => {
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
         msg3 += medal + ' ' + contact.name + ' (' + contact.totalMessages + ')\n';
@@ -233,7 +233,7 @@ Total Conversations: ${conversationStats.totalConversations}
       if (p.chatHabits.peakDay) {
         msg4 += '📅 Ngay hay chat: ' + p.chatHabits.peakDay + '\n';
       }
-      msg4 += '�️ AnhA: ' + p.chatHabits.messagesWithMedia + ' | 📎 File: ' + p.chatHabits.messagesWithFiles + '\n';
+      msg4 += ' Anh: ' + p.chatHabits.messagesWithMedia + ' | File: ' + p.chatHabits.messagesWithFiles + '\n';
       if (p.chatHabits.avgMessageLength > 0) {
         msg4 += '📝 TB ' + p.chatHabits.avgMessageLength + ' ky tu/tin';
       }

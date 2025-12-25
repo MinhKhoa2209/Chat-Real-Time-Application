@@ -25,12 +25,12 @@ const Input: React.FC<InputProps> = ({
   return (
     <div>
       <label
-        className="block text-sm font-medium leading-6 text-gray-900"
+        className="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-100 mb-2"
         htmlFor={id}
       >
         {label}
       </label>
-      <div className="mt-2">
+      <div>
         <input
           id={id}
           type={type}
@@ -38,24 +38,13 @@ const Input: React.FC<InputProps> = ({
           disabled={disabled}
           {...register(id, { required })}
           className={clsx(
-            `form-input
-            block
-            w-full
-            rounded-md
-            border-0
-            py-1.5
-            text-gray-900
-            shadow-sm
-            ring-1
-            ring-inset
-            ring-gray-300
+            `block w-full rounded-xl border-0 px-4 py-3 text-gray-900 dark:text-white
+            bg-gray-100 dark:bg-gray-800
             placeholder:text-gray-400
-            focus:ring-2
-            focus:ring-inset
-            focus:ring-sky-600
-            sm:text-sm
-            sm:leading-6`,
-            errors[id] && "focus:ring-rose-500",
+            focus:outline-none focus:ring-2 focus:ring-sky-500
+            transition-all duration-200
+            sm:text-sm`,
+            errors[id] && "ring-2 ring-rose-500",
             disabled && "opacity-50 cursor-default"
           )}
         />

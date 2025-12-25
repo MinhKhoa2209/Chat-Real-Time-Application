@@ -371,7 +371,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
         conversationId={conversationId || ""}
       />
 
-      <div className="py-4 px-4 bg-white border-t flex flex-col gap-2 lg:gap-4 w-full z-10">
+      <div className="py-3 px-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col gap-2 lg:gap-3 w-full">
         
         {/* Hidden audio player for preview */}
         <audio 
@@ -383,31 +383,31 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
         
         {/* Voice Recording Preview */}
         {audioBlob && audioUrl && (
-          <div className="flex items-center gap-3 bg-sky-50 p-3 rounded-xl border border-sky-200">
+          <div className="flex items-center gap-3 bg-sky-50 dark:bg-sky-900/30 p-3 rounded-2xl border border-sky-200 dark:border-sky-800">
             <button
               onClick={togglePlayPreview}
-              className="p-2 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition"
+              className="p-2.5 gradient-primary text-white rounded-full hover:shadow-lg transition-all duration-300"
             >
               {isPlaying ? <HiPause size={18} /> : <HiPlay size={18} />}
             </button>
             
             <div className="flex-1">
-              <div className="text-sm font-medium text-gray-700">🎤 Tin nhắn thoại</div>
-              <div className="text-xs text-gray-500">{formatRecordingTime(recordingTime)}</div>
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-200">🎤 Voice message</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{formatRecordingTime(recordingTime)}</div>
             </div>
             
             <button
               onClick={cancelVoiceRecording}
-              className="p-2 text-red-500 hover:bg-red-100 rounded-full transition"
-              title="Xóa"
+              className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-full transition"
+              title="Delete"
             >
               <HiTrash size={20} />
             </button>
             
             <button
               onClick={sendVoiceMessage}
-              className="p-2 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition"
-              title="Gửi"
+              className="p-2.5 gradient-primary text-white rounded-full hover:shadow-lg transition-all duration-300"
+              title="Send"
             >
               <HiPaperAirplane size={18} />
             </button>
@@ -415,24 +415,24 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
         )}
         
         {replyTo && (
-        <div className="flex items-center justify-between bg-gray-100 p-2 rounded-lg border-l-4 border-sky-500 text-sm text-gray-600 animate-fade-in-up">
+        <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-3 rounded-2xl border-l-4 border-sky-500 text-sm text-gray-600 dark:text-gray-300 animate-fade-in-up">
            <div className="flex flex-col overflow-hidden mr-2">
-              <span className="font-bold text-sky-600 text-xs mb-1">
+              <span className="font-semibold text-sky-600 dark:text-sky-400 text-xs mb-1">
                 Replying to {replyTo.sender.name}
               </span>
               <span className="truncate opacity-75 text-xs">
                 {replyTo.image
-                  ? "📷 [Image]"
+                  ? "📷 Image"
                   : replyTo.fileUrl
-                  ? "📎 [File]"
+                  ? "📎 File"
                   : replyTo.body}
               </span>
            </div>
            <button 
              onClick={() => setReplyTo(null)}
-             className="p-1 hover:bg-gray-200 rounded-full transition"
+             className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition"
            >
-             <XMarkIcon className="h-5 w-5 text-gray-500 hover:text-red-500"/>
+             <XMarkIcon className="h-5 w-5 text-gray-400 hover:text-red-500"/>
            </button>
         </div>
       )}
@@ -443,19 +443,19 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
           <button
             type="button"
             onClick={handleVoiceRecord}
-            className={`p-2 transition rounded-full hover:bg-gray-100 ${
+            className={`p-2 transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 ${
               isRecording ? "text-red-500 animate-pulse" : "text-sky-500 hover:text-sky-600"
             }`}
-            title={isRecording ? "Dừng ghi âm" : "Ghi âm"}
+            title={isRecording ? "Stop recording" : "Record"}
           >
             {isRecording ? <HiStop size={22} /> : <HiMicrophone size={22} />}
           </button>
           
           {/* Recording indicator */}
           {isRecording && (
-            <div className="flex items-center gap-2 px-2 py-1 bg-red-100 rounded-full">
+            <div className="flex items-center gap-2 px-2 py-1 bg-red-100 dark:bg-red-900/30 rounded-full">
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-xs text-red-600 font-medium">
+              <span className="text-xs text-red-600 dark:text-red-400 font-medium">
                 {formatRecordingTime(recordingTime)}
               </span>
             </div>
@@ -563,7 +563,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
             uploadPreset="nxq0q7mq"
           >
             <div 
-              className="p-2 text-sky-500 hover:text-sky-600 cursor-pointer transition rounded-full hover:bg-gray-100" 
+              className="p-2 text-sky-500 hover:text-sky-600 cursor-pointer transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-800" 
               title="Image, video or file"
             >
               <HiPhoto size={22} />
@@ -573,7 +573,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
           {/* Sticker */}
           <button
             type="button"
-            className="p-2 text-sky-500 hover:text-sky-600 transition rounded-full hover:bg-gray-100"
+            className="p-2 text-sky-500 hover:text-sky-600 transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
             title="Sticker"
             onClick={() => setIsStickerModalOpen(true)}
           >
@@ -583,7 +583,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
           {/* GIF */}
           <button
             type="button"
-            className="p-2 text-sky-500 hover:text-sky-600 transition rounded-full hover:bg-gray-100"
+            className="p-2 text-sky-500 hover:text-sky-600 transition rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
             title="GIF"
             onClick={() => setIsGifModalOpen(true)}
           >
@@ -612,7 +612,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
           {messageValue.trim() ? (
             <button
               type="submit"
-              className="rounded-full p-2 bg-sky-500 cursor-pointer hover:bg-sky-600 transition flex-shrink-0"
+              className="rounded-xl p-2.5 gradient-primary cursor-pointer hover:shadow-lg transition-all duration-300 flex-shrink-0"
               title="Send"
             >
               <HiPaperAirplane size={18} className="text-white" />
@@ -630,7 +630,7 @@ const Form: React.FC<FormProps> = ({ isBot, conversationUsers = [] }) => {
                 });
                 setReplyTo(null);
               }}
-              className="p-2 text-sky-500 hover:text-sky-600 transition rounded-full hover:bg-gray-100 flex-shrink-0"
+              className="p-2.5 text-sky-500 hover:text-sky-600 transition rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
               title="Like"
             >
               <BiSolidLike size={22} />

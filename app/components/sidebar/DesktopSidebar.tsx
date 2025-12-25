@@ -17,31 +17,41 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ currentUser }) => {
 
   return (
     <>
-    <SettingsModal isOpen={isOpen} onClose={() => setIsOpen(false)} currentUser={currentUser}/>
-    <div
-      className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:w-22 xl:px-6 lg:overflow-y-auto lg:bg-white lg:border-r lg:pb-4 lg:flex lg:flex-col justify-between"
-    >
-      <nav className="mt-4 flex flex-col justify-between">
-        <ul role="list" className="flex flex-col items-center space-y-1">
-          {routes.map((item) => (
-            <DesktopItem
-              key={item.label}
-              href={item.href}
-              label={item.label}
-              icon={item.icon}
-              active={item.active}
-              onClick={item.onClick}
-            />
-          ))}
-        </ul>
-      </nav>
-      <nav className="mt-4 flex flex-col justify-between items-center">
-        <div onClick={()=> setIsOpen(true)} className="cursor-pointer hover:opacity-75 transition">
-          <Avatar user = {currentUser}/>
+      <SettingsModal isOpen={isOpen} onClose={() => setIsOpen(false)} currentUser={currentUser}/>
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:w-20 lg:flex lg:flex-col justify-between sidebar-modern">
+        {/* Logo */}
+        <div className="flex items-center justify-center h-16 mt-2">
+          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg dark:shadow-sky-500/20">
+            <span className="text-white font-bold text-lg">K</span>
+          </div>
         </div>
-
-      </nav>
-    </div>
+        
+        {/* Navigation */}
+        <nav className="flex-1 flex flex-col items-center py-4">
+          <ul role="list" className="flex flex-col items-center space-y-2 w-full px-3">
+            {routes.map((item) => (
+              <DesktopItem
+                key={item.label}
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                active={item.active}
+                onClick={item.onClick}
+              />
+            ))}
+          </ul>
+        </nav>
+        
+        {/* User Avatar */}
+        <nav className="pb-6 flex flex-col items-center">
+          <div 
+            onClick={() => setIsOpen(true)} 
+            className="cursor-pointer transition-all duration-300 hover:scale-110 p-1 rounded-full hover:ring-2 hover:ring-sky-400/50"
+          >
+            <Avatar user={currentUser}/>
+          </div>
+        </nav>
+      </div>
     </>
   );
 };

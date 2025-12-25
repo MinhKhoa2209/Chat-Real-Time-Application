@@ -6,6 +6,7 @@ import AuthContext from "./context/AuthContext";
 import ActiveStatus from "./components/ActiveStatus";
 import { CallProvider } from "./context/CallContext";
 import CallComponents from "./components/call/CallComponents";
+import { ThemeProvider } from "./context/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,18 +29,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthContext>
-          <CallProvider>
-            <ToasterContext />
-            <ActiveStatus />
-            <CallComponents />
-            {children}
-          </CallProvider>
-        </AuthContext>
+        <ThemeProvider>
+          <AuthContext>
+            <CallProvider>
+              <ToasterContext />
+              <ActiveStatus />
+              <CallComponents />
+              {children}
+            </CallProvider>
+          </AuthContext>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -12,7 +12,7 @@ const MobileFooter = () => {
         return null;
     }
     return (
-        <div className="fixed flex justify-between w-full bottom-0 z-40 items-center bg-white border-t[1px] lg:hidden">
+        <div className="fixed flex justify-around w-full bottom-0 z-40 items-center glass border-t border-gray-200/50 dark:border-gray-700/50 lg:hidden py-2 px-4">
             {routes.map((route) => (
                 <MobileItem 
                     key={route.href}
@@ -22,9 +22,8 @@ const MobileFooter = () => {
                     onClick={route.onClick}
                 />
             ))}
-
         </div>
     );
 };
-;
+
 export default MobileFooter;

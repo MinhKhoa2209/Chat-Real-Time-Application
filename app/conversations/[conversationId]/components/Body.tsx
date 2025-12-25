@@ -161,7 +161,7 @@ const Body: React.FC<BodyProps> = ({ initialMessages }) => {
   }, [conversationId, currentUserId]);
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
       {sortedMessages.map((message, i) => (
         <MemoizedMessageBox
           isLast={i === sortedMessages.length - 1}

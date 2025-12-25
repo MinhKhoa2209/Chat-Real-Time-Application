@@ -4,7 +4,6 @@ import { FullMessageType } from "@/app/types";
 import clsx from "clsx";
 import { useSession } from "next-auth/react";
 import { format } from "date-fns";
-import Avatar from "@/app/components/Avatar";
 import Image from "next/image";
 import { useState, useMemo, useEffect, useRef } from "react";
 import axios from "axios";
@@ -75,7 +74,6 @@ const MessageBox: React.FC<MessageBoxProps> = ({
   // Check if message is a sticker (single emoji)
   const isStickerMessage = useMemo(() => {
     if (!data.body || data.image || data.fileUrl || data.body === "👍") return false;
-    // Check if it's a single emoji (1-2 characters for some emojis)
     const trimmed = data.body.trim();
     return trimmed.length <= 2 && /\p{Emoji}/u.test(trimmed);
   }, [data.body, data.image, data.fileUrl]);
@@ -84,7 +82,6 @@ const MessageBox: React.FC<MessageBoxProps> = ({
   const isVideoFile = useMemo(() => {
     if (!data.fileUrl) return false;
     const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv'];
-    // Exclude voice messages
     if (data.fileName?.includes('🎤') || data.fileName?.toLowerCase().includes('voice')) {
       return false;
     }
@@ -97,32 +94,28 @@ const MessageBox: React.FC<MessageBoxProps> = ({
     return data.fileName?.includes('🎤') || data.fileName?.toLowerCase().includes('voice');
   }, [data.fileUrl, data.fileName]);
 
-  const container = clsx("flex gap-2 p-4", isOwn && "justify-end");
-  const avatar = clsx(isOwn && "order-2");
-  const body = clsx("flex flex-col gap-2", isOwn ? "items-end" : "items-start");
-
   const message = clsx(
-    "text-sm w-fit overflow-hidden",
+    "text-sm w-fit overflow-hidden max-w-[320px]",
     isLikeMessage
-      ? "" // Không có background cho Like
+      ? ""
       : data.isDeleted
-      ? "italic text-gray-500 bg-gray-100 border border-gray-200"
+      ? "italic text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
       : data.image
       ? ""
       : isFileMessage
       ? isOwn
-        ? "bg-sky-500 text-white"
-        : "bg-white border border-gray-200 text-gray-900"
+        ? "message-own"
+        : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white"
       : isOwn
-      ? "bg-sky-500 text-white"
-      : "bg-gray-100",
+      ? "message-own"
+      : "message-other",
     isLikeMessage
-      ? "" // Không có padding/border cho Like
+      ? ""
       : data.image
-      ? "rounded-md p-0"
+      ? "rounded-2xl p-0"
       : isFileMessage
-      ? "rounded-xl px-4 py-3"
-      : "rounded-full py-2 px-3"
+      ? "rounded-2xl px-3 py-2.5"
+      : "rounded-2xl py-2 px-3"
   );
 
   const replyPreview = useMemo(() => {
@@ -282,9 +275,8 @@ const MessageBox: React.FC<MessageBoxProps> = ({
   // Render system message (user left/joined/added group) - Messenger style
   if (isSystemMessage) {
     return (
-      <div className="flex items-center gap-2 p-2 justify-center">
-        <Avatar user={data.sender} />
-        <div className="text-xs text-gray-600 bg-gray-100 px-3 py-1.5 rounded-full font-medium">
+      <div className="flex items-center justify-center py-2 px-4">
+        <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
           {systemMessageText}
         </div>
       </div>
@@ -300,224 +292,233 @@ const MessageBox: React.FC<MessageBoxProps> = ({
         conversations={conversations}
       />
       
-      <div className={container}>
-        <div className={avatar}>
-          <Avatar user={data.sender} />
-        </div>
-
-      <div className={body}>
-        <div className="flex items-center gap-1">
-          <div className="text-sm text-gray-500">{data.sender?.name || "Unknown"}</div>
-          <div className="text-xs text-gray-400">
-            {data.createdAt ? format(new Date(data.createdAt), "p") : ""}
-          </div>
-        </div>
-
-        {data.forwardedFrom && !data.isDeleted && (
-          <div className="text-xs text-gray-600 mb-2 flex items-center gap-1.5 font-medium">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-            <span>Forwarded from {data.forwardedFrom.name}</span>
-          </div>
-        )}
-
-        {data.replyTo && !data.isDeleted && (
-          <div className="text-xs text-gray-500 bg-gray-50 border-l-2 border-sky-500 pl-2 py-1 mb-1 max-w-60 truncate opacity-80">
-            <span className="font-bold mr-1">
-              {data.replyTo.sender?.name || "Unknown"}:
-            </span>
-            {replyPreview}
-          </div>
-        )}
-
-        <div className="relative group flex items-center gap-2">
-          {isOwn && !data.isDeleted && (
-            <MessageActionsMenu
-              isOwn={isOwn}
-              onReply={handleReply}
-              onUnsend={handleUnsend}
-              onReact={handleReact}
-              onEdit={handleEdit}
-              onForward={handleForward}
-            />
-          )}
-
-          <div className={message}>
-            <ImageModal
-              src={data.image}
-              isOpen={imageModalOpen}
-              onClose={() => setImageModalOpen(false)}
-            />
-
-            {data.isDeleted ? (
-              <div>{data.body}</div>
-            ) : isLikeMessage ? (
-              <div className="text-6xl cursor-pointer hover:scale-110 transition">
-                👍
-              </div>
-            ) : isStickerMessage ? (
-              <div className="text-4xl cursor-pointer hover:scale-110 transition">
-                {data.body}
-              </div>
-            ) : data.image ? (
-              data.image.includes('giphy.com') || data.image.endsWith('.gif') ? (
-                // Use regular img tag for GIFs to avoid Next.js Image optimization issues
-                <img
-                  alt="GIF"
-                  src={data.image}
-                  onClick={() => setImageModalOpen(true)}
-                  className="max-w-[288px] max-h-[288px] object-cover cursor-pointer hover:scale-110 transition rounded-md"
-                />
-              ) : data.image.includes('pollinations.ai') ? (
-                // Use regular img for Pollinations AI images to avoid timeout issues
-                <img
-                  alt="AI Generated Image"
-                  src={data.image}
-                  onClick={() => setImageModalOpen(true)}
-                  className="max-w-[288px] max-h-[288px] object-cover cursor-pointer hover:scale-110 transition rounded-md"
-                  loading="lazy"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.onerror = null;
-                    target.src = '/images/placeholder.webp';
-                    target.alt = 'Image failed to load';
-                  }}
-                />
-              ) : (
+      <div className={clsx("flex gap-2 px-4 py-1 group/message", isOwn && "justify-end")}>
+        {/* Avatar for other user's messages - left side */}
+        {!isOwn && (
+          <div className="flex-shrink-0 self-end mb-1">
+            <div className="relative group/avatar">
+              <div className="w-7 h-7 rounded-full overflow-hidden">
                 <Image
-                  alt="Image"
-                  height="288"
-                  width="288"
-                  src={data.image}
-                  onClick={() => setImageModalOpen(true)}
-                  className="object-cover cursor-pointer hover:scale-110 transition translate rounded-md"
+                  src={data.sender?.image || "/images/placeholder.webp"}
+                  alt={data.sender?.name || "User"}
+                  width={28}
+                  height={28}
+                  className="object-cover"
                 />
-              )
-            ) : isFileMessage ? (
-              isVoiceMessage ? (
-                // Voice message player - Messenger style
-                <VoiceMessagePlayer fileUrl={data.fileUrl} isOwn={isOwn} />
-              ) : isVideoFile ? (
-                <video
-                  controls
-                  className="max-w-[288px] max-h-[288px] rounded-md"
-                  src={data.fileUrl || undefined}
-                >
-                  Trình duyệt không hỗ trợ video.
-                </video>
-              ) : (
-                <a
-                  href={data.fileUrl || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={clsx(
-                    "flex items-center gap-3 no-underline",
-                    isOwn ? "text-white" : "text-gray-900"
-                  )}
-                  download={data.fileName || undefined}
-                >
-                  <div
-                    className={clsx(
-                      "p-3 rounded-full",
-                      isOwn ? "bg-white/20" : "bg-sky-100 text-sky-600"
-                    )}
-                  >
-                    <HiOutlineArrowDownTray size={20} />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-sm max-w-[200px] truncate">
-                      {data.fileName || "Attachment"}
-                    </span>
-                    {formatFileSize(data.fileSize) && (
-                      <span className="text-xs opacity-75">
-                        {formatFileSize(data.fileSize)}
-                      </span>
-                    )}
-                  </div>
-                </a>
-              )
-            ) : isEditing ? (
-              <div className="flex flex-col gap-2 min-w-[200px] max-w-[350px]">
-                <textarea
-                  value={editedText}
-                  onChange={(e) => setEditedText(e.target.value)}
-                  className={clsx(
-                    "w-full p-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm",
-                    isOwn 
-                      ? "bg-white text-gray-900 border-2 border-sky-400" 
-                      : "bg-white text-gray-900 border-2 border-gray-300"
-                  )}
-                  rows={2}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSaveEdit();
-                    }
-                    if (e.key === 'Escape') {
-                      handleCancelEdit();
-                    }
-                  }}
-                />
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={handleCancelEdit}
-                    className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    className="px-3 py-1 text-xs font-medium bg-sky-500 hover:bg-sky-600 text-white rounded-md transition"
-                  >
-                    Save
-                  </button>
-                </div>
               </div>
-            ) : (
-              <div>{data.body}</div>
+              {/* Tooltip showing sender name on avatar hover */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg whitespace-nowrap opacity-0 invisible group-hover/avatar:opacity-100 group-hover/avatar:visible transition-all duration-200 z-50">
+                {data.sender?.name || "Unknown"}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className={clsx("flex flex-col gap-1", isOwn ? "items-end" : "items-start")}>
+          {data.forwardedFrom && !data.isDeleted && (
+            <div className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1 px-1">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              <span>Forwarded</span>
+            </div>
+          )}
+
+          {data.replyTo && !data.isDeleted && (
+            <div className={clsx(
+              "text-xs bg-gray-100 dark:bg-gray-800 border-l-2 border-sky-500 pl-2 py-1 mb-1 max-w-[200px] truncate rounded-r-lg",
+              isOwn ? "text-gray-600 dark:text-gray-300" : "text-gray-500 dark:text-gray-400"
+            )}>
+              <span className="font-medium text-sky-600 dark:text-sky-400 mr-1">
+                {data.replyTo.sender?.name || "Unknown"}:
+              </span>
+              {replyPreview}
+            </div>
+          )}
+
+          <div className="relative group/content flex items-center gap-1">
+            {isOwn && !data.isDeleted && (
+              <MessageActionsMenu
+                isOwn={isOwn}
+                onReply={handleReply}
+                onUnsend={handleUnsend}
+                onReact={handleReact}
+                onEdit={handleEdit}
+                onForward={handleForward}
+              />
+            )}
+
+            {/* Time tooltip - shows on hover */}
+            <div className={clsx(
+              "absolute top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900/90 dark:bg-gray-700/90 text-white text-[10px] rounded-lg whitespace-nowrap opacity-0 invisible group-hover/content:opacity-100 group-hover/content:visible transition-all duration-200 z-40 pointer-events-none",
+              isOwn ? "right-full mr-2" : "left-full ml-2"
+            )}>
+              {data.createdAt ? format(new Date(data.createdAt), "p") : ""}
+            </div>
+
+            <div className={message}>
+              <ImageModal
+                src={data.image}
+                isOpen={imageModalOpen}
+                onClose={() => setImageModalOpen(false)}
+              />
+
+              {data.isDeleted ? (
+                <div className="text-gray-500 dark:text-gray-400 italic">{data.body}</div>
+              ) : isLikeMessage ? (
+                <div className="text-5xl cursor-pointer hover:scale-110 transition">
+                  👍
+                </div>
+              ) : isStickerMessage ? (
+                <div className="text-4xl cursor-pointer hover:scale-110 transition">
+                  {data.body}
+                </div>
+              ) : data.image ? (
+                data.image.includes('giphy.com') || data.image.endsWith('.gif') ? (
+                  <img
+                    alt="GIF"
+                    src={data.image}
+                    onClick={() => setImageModalOpen(true)}
+                    className="max-w-[280px] max-h-[280px] object-cover cursor-pointer hover:opacity-90 transition rounded-2xl"
+                  />
+                ) : data.image.includes('pollinations.ai') ? (
+                  <img
+                    alt="AI Generated Image"
+                    src={data.image}
+                    onClick={() => setImageModalOpen(true)}
+                    className="max-w-[280px] max-h-[280px] object-cover cursor-pointer hover:opacity-90 transition rounded-2xl"
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = '/images/placeholder.webp';
+                      target.alt = 'Image failed to load';
+                    }}
+                  />
+                ) : (
+                  <Image
+                    alt="Image"
+                    height="280"
+                    width="280"
+                    src={data.image}
+                    onClick={() => setImageModalOpen(true)}
+                    className="object-cover cursor-pointer hover:opacity-90 transition rounded-2xl"
+                  />
+                )
+              ) : isFileMessage ? (
+                isVoiceMessage ? (
+                  <VoiceMessagePlayer fileUrl={data.fileUrl} isOwn={isOwn} />
+                ) : isVideoFile ? (
+                  <video
+                    controls
+                    className="max-w-[280px] max-h-[280px] rounded-2xl"
+                    src={data.fileUrl || undefined}
+                  >
+                    Browser does not support video.
+                  </video>
+                ) : (
+                  <a
+                    href={data.fileUrl || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={clsx(
+                      "flex items-center gap-3 no-underline",
+                      isOwn ? "text-white" : "text-gray-900 dark:text-white"
+                    )}
+                    download={data.fileName || undefined}
+                  >
+                    <div
+                      className={clsx(
+                        "p-2.5 rounded-full",
+                        isOwn ? "bg-white/20" : "bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400"
+                      )}
+                    >
+                      <HiOutlineArrowDownTray size={18} />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm max-w-[180px] truncate">
+                        {data.fileName || "Attachment"}
+                      </span>
+                      {formatFileSize(data.fileSize) && (
+                        <span className="text-xs opacity-70">
+                          {formatFileSize(data.fileSize)}
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                )
+              ) : isEditing ? (
+                <div className="flex flex-col gap-2 min-w-[200px] max-w-[300px]">
+                  <textarea
+                    value={editedText}
+                    onChange={(e) => setEditedText(e.target.value)}
+                    className="w-full p-2 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
+                    rows={2}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSaveEdit();
+                      }
+                      if (e.key === 'Escape') {
+                        handleCancelEdit();
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      className="px-3 py-1 text-xs font-medium bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>{data.body}</div>
+              )}
+            </div>
+
+            {!isOwn && !data.isDeleted && (
+              <MessageActionsMenu
+                isOwn={isOwn}
+                onReply={handleReply}
+                onReact={handleReact}
+                onForward={handleForward}
+                onRemove={handleRemove}
+              />
             )}
           </div>
 
-          {!isOwn && !data.isDeleted && (
-            <MessageActionsMenu
-              isOwn={isOwn}
-              onReply={handleReply}
-              onReact={handleReact}
-              onForward={handleForward}
-              onRemove={handleRemove}
-            />
+          {reactionList.length > 0 && !data.isDeleted && (
+            <div className="inline-flex items-center bg-white dark:bg-gray-800 rounded-full px-1.5 py-0.5 shadow-sm border border-gray-100 dark:border-gray-700 text-xs -mt-1">
+              {reactionList.slice(0, 3).map((r, i) => (
+                <span key={i} title={r.user.name} className="hover:scale-110 transition-transform cursor-pointer">
+                  {r.content}
+                </span>
+              ))}
+              {reactionList.length > 3 && (
+                <span className="text-gray-400 ml-0.5 text-[10px]">
+                  +{reactionList.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isLast && isOwn && seenList.length > 0 && (
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 px-1">
+              Seen by {seenList}
+            </div>
           )}
         </div>
-
-        {reactionList.length > 0 && !data.isDeleted && (
-          <div
-            className={clsx(
-              "inline-flex items-center -mt-2 bg-white rounded-full px-1 py-0 shadow-sm border border-gray-100 text-xs h-5",
-              isOwn ? "mr-1" : "ml-1"
-            )}
-          >
-            {reactionList.slice(0, 3).map((r, i) => (
-              <span key={i} title={r.user.name}>
-                {r.content}
-              </span>
-            ))}
-            {reactionList.length > 3 && (
-              <span className="text-gray-400 ml-0.5">
-                +{reactionList.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
-        {isLast && isOwn && seenList.length > 0 && (
-          <div className="text-xs font-light text-gray-500">
-            {`Seen by ${seenList}`}
-          </div>
-        )}
       </div>
-    </div>
     </>
   );
 };
@@ -673,11 +674,11 @@ const MessageActionsMenu = ({ isOwn, onReply, onUnsend, onReact, onEdit, onForwa
   return (
     <Menu
       as="div"
-      className="relative inline-block text-left opacity-0 group-hover:opacity-100 transition-opacity z-50"
+      className="relative inline-block text-left opacity-0 group-hover/content:opacity-100 transition-opacity z-50"
     >
       <MenuButton
         ref={refs.setReference}
-        className="p-1 hover:bg-gray-100 rounded-full text-gray-500 transition outline-none"
+        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400 transition outline-none"
       >
         <HiFaceSmile className="w-5 h-5" />
       </MenuButton>
@@ -686,9 +687,9 @@ const MessageActionsMenu = ({ isOwn, onReply, onUnsend, onReact, onEdit, onForwa
         <MenuItems
           ref={refs.setFloating}
           style={floatingStyles}
-          className="w-fit divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+          className="w-fit divide-y divide-gray-100 dark:divide-gray-700 rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 dark:ring-gray-700 focus:outline-none z-50"
         >
-          <div className="px-2 py-2 flex gap-1 justify-center bg-gray-50 rounded-t-md">
+          <div className="px-2 py-2 flex gap-1 justify-center bg-gray-50 dark:bg-gray-700 rounded-t-md">
             {["❤️", "😆", "😮", "👍", "👎", "😡"].map((emoji) => (
               <MenuItem key={emoji} as="div">
                 <button
@@ -707,7 +708,7 @@ const MessageActionsMenu = ({ isOwn, onReply, onUnsend, onReact, onEdit, onForwa
                 <button
                   onClick={onReply}
                   className={`${
-                    focus ? "bg-sky-500 text-white" : "text-gray-900"
+                    focus ? "bg-sky-500 text-white" : "text-gray-900 dark:text-gray-100"
                   } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                 >
                   Reply
@@ -720,7 +721,7 @@ const MessageActionsMenu = ({ isOwn, onReply, onUnsend, onReact, onEdit, onForwa
                 <button
                   onClick={onForward}
                   className={`${
-                    focus ? "bg-sky-500 text-white" : "text-gray-900"
+                    focus ? "bg-sky-500 text-white" : "text-gray-900 dark:text-gray-100"
                   } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                 >
                   Forward
@@ -734,7 +735,7 @@ const MessageActionsMenu = ({ isOwn, onReply, onUnsend, onReact, onEdit, onForwa
                   <button
                     onClick={onEdit}
                     className={`${
-                      focus ? "bg-sky-500 text-white" : "text-gray-900"
+                      focus ? "bg-sky-500 text-white" : "text-gray-900 dark:text-gray-100"
                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                   >
                     Edit
@@ -749,7 +750,7 @@ const MessageActionsMenu = ({ isOwn, onReply, onUnsend, onReact, onEdit, onForwa
                   <button
                     onClick={onUnsend}
                     className={`${
-                      focus ? "bg-red-500 text-white" : "text-red-900"
+                      focus ? "bg-red-500 text-white" : "text-red-600 dark:text-red-400"
                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                   >
                     Unsend
@@ -764,7 +765,7 @@ const MessageActionsMenu = ({ isOwn, onReply, onUnsend, onReact, onEdit, onForwa
                   <button
                     onClick={onRemove}
                     className={`${
-                      focus ? "bg-red-500 text-white" : "text-red-900"
+                      focus ? "bg-red-500 text-white" : "text-red-600 dark:text-red-400"
                     } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                   >
                     Remove
